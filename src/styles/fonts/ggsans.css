@@ -1,0 +1,39 @@
+@font-face {
+    font-family: 'Gg Sans';
+    src: local('Gg Sans Normal'), local('Gg-Sans-Normal'),
+        url('ggsans-Normal.woff2') format('woff2'),
+        url('ggsans-Normal.woff') format('woff'),
+        url('ggsans-Normal.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Gg Sans';
+    src: local('Gg Sans Medium'), local('Gg-Sans-Medium'),
+        url('ggsans-Medium.woff2') format('woff2'),
+        url('ggsans-Medium.woff') format('woff'),
+        url('ggsans-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Gg Sans';
+    src: local('Gg Sans Semibold'), local('Gg-Sans-Semibold'),
+        url('ggsans-Semibold.woff2') format('woff2'),
+        url('ggsans-Semibold.woff') format('woff'),
+        url('ggsans-Semibold.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Gg Sans';
+    src: local('Gg Sans Bold'), local('Gg-Sans-Bold'),
+        url('ggsans-Bold.woff2') format('woff2'),
+        url('ggsans-Bold.woff') format('woff'),
+        url('ggsans-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+}

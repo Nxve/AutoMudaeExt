@@ -1,0 +1,1 @@
+export const isTokenValid = (token: string) => token && token.length >= 70 && token.length < 80 && /\w+\.\w+\.[-\w]+$/.test(token);

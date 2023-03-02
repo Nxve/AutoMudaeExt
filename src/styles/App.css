@@ -1,0 +1,216 @@
+@import url("./discord.css");
+
+#App {
+  --items-padding-inline: 4px;
+
+  width: 200px;
+  background-color: var(--primary-700);
+  transition: width 200ms;
+}
+
+#App.wide {
+  width: 300px;
+}
+
+/* Header */
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px;
+  background-color: var(--primary-660);
+  color: var(--header-primary);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+header img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+}
+
+header span {
+  flex-grow: 1;
+  text-align: center;
+}
+
+/* Items & Interactables */
+
+.item-wrapper {
+  min-height: 1.5rem;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--interactive-normal);
+}
+
+.item-wrapper.inner-0 {
+  background-color: var(--primary-600);
+}
+
+.item-wrapper.inner-1 {
+  font-weight: 500;
+  font-size: .9rem;
+  background-color: var(--primary-560);
+}
+
+.item-wrapper> :only-child {
+  width: 100%;
+}
+
+.item-wrapper> :first-child:not(button) {
+  padding-left: var(--items-padding-inline);
+}
+
+.item-wrapper > button {
+  padding: 4px var(--items-padding-inline);
+}
+
+.item-wrapper input[type=range]{
+  width: 50%;
+}
+
+button,
+select,
+input {
+  color: var(--interactive-normal);
+}
+
+button,
+select,
+input[type=checkbox],
+label {
+  cursor: pointer;
+}
+
+button,
+input[type=text] {
+  transition: 100ms;
+  border-radius: 4px;
+}
+
+select {
+  background-color: var(--background-primary);
+  direction: rtl;
+}
+
+.inner-1 select {
+  background-color: var(--primary-560);
+}
+
+button {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+}
+
+button:has(svg:only-child) {
+  width: 24px;
+  height: 24px;
+}
+
+button > svg:only-child {
+  max-width: 16px;
+  max-height: 16px;
+}
+
+button>svg {
+  transition: 100ms;
+}
+
+button>svg+span {
+  flex-grow: 1;
+  margin-left: 6px;
+  text-align: left;
+}
+
+button:enabled:hover {
+  color: var(--interactive-hover);
+  background-color: var(--background-modifier-hover);
+}
+
+button:enabled:active {
+  color: var(--interactive-active);
+  background-color: var(--background-modifier-active);
+}
+
+button:disabled {
+  color: var(--interactive-muted);
+  cursor: not-allowed;
+}
+
+button.toggle>svg:last-child {
+  transform: rotateZ(90deg);
+}
+
+label {
+  margin-left: 3px;
+}
+
+.inner-1 input[type=text] {
+  background-color: var(--primary-530);
+  padding-left: 3px;
+}
+
+.inner-1 input[type=text]:is(:hover, :focus) {
+  background-color: var(--primary-500);
+}
+
+#tokenlist-add:hover {
+  color: var(--green-300);
+}
+
+#tokenlist-clear:hover {
+  color: var(--red-400);
+}
+
+/* Generic structures */
+
+.flex-inline-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.list {
+  padding: 0px var(--items-padding-inline) var(--items-padding-inline);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: .8em;
+}
+
+.list > div:has(label) {
+  display: flex;
+  align-items: center;
+}
+
+/* Tooltip */
+
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  margin-bottom: 3px;
+  padding: 6px;
+  border-radius: 5px;
+  font-size: .8rem;
+  color: var(--interactive-hover);
+  background-color: var(--background-floating);
+  pointer-events: none;
+  user-select: none;
+  animation: opacity-up 150ms forwards;
+}
+
+@keyframes opacity-up {
+  0% { opacity: 0; } 
+  100% { opacity: 1;}
+}

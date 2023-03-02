@@ -1,0 +1,25 @@
+@import url(./fonts/ggsans.css);
+
+body {
+  font-family: "gg sans", 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+
+  font-size: 16px;
+  line-height: 1;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  outline: none;
+  font-weight: inherit;
+  font-style: inherit;
+  font-family: inherit;
+  font-size: 100%;
+}
+
+*:not(input[type=text]) {
+  user-select: none;
+}
