@@ -1,41 +1,11 @@
+import type { BotState, Preferences, PrefLanguage, PrefNotification, PrefNotificationType, PrefReactionType, PrefRollType, PrefUseUsers } from "./lib/bot";
 import React, { useEffect, useState } from "react";
 import { isTokenValid } from "./lib/utils";
-import "./styles/App.css";
-import type { BotState } from "./lib/bot";
-import { BOT_STATES } from "./lib/bot";
+import { BOT_STATES, NOTIFICATIONS } from "./lib/bot";
 import { MESSAGES } from "./lib/messaging";
 import { SVGS } from "./lib/svgs";
-
-const E_NOTIFICATIONS = {
-  "foundcharacter": "Found character",
-  "claimcharacter": "Claim character",
-  "soulmate": "New soulmate",
-  "cantclaim": "Can't claim character",
-  "wishsteal": "Wish steal",
-  "cantroll": "Can't roll and can still marry"
-} as const;
-
-type PrefUseUsers = "logged" | "tokenlist";
-type PrefRollType = "wx" | "wa" | "wg" | "hx" | "ha" | "hg";
-type PrefNotificationType = "sound" | "popup" | "both";
-type PrefNotification = keyof typeof E_NOTIFICATIONS;
-type PrefLanguage = "en" | "fr" | "es" | "pt-br";
-type PrefReactionType = "reaction" | "button";
-
-interface Preferences {
-  useUsers: PrefUseUsers
-  tokenList: string[]
-  rollEnabled: boolean
-  rollType: PrefRollType
-  notificationType: PrefNotificationType
-  notifications: Set<PrefNotification>
-  languague: PrefLanguage
-  reactionType: PrefReactionType,
-  claimDelay: number
-  claimDelayRandom: boolean
-  kakeraDelay: number
-  kakeraDelayRandom: boolean
-}
+import { KAKERAS } from "./lib/mudae";
+import "./styles/App.css";
 
 function App() {
   /// Popup state
@@ -44,7 +14,8 @@ function App() {
   const [isConfiguringTokenlist, setIsConfiguringTokenlist] = useState(false);
   const [isConfiguringNotifications, setIsConfiguringNotifications] = useState(false);
   const [isConfiguringClaim, setIsConfiguringClaim] = useState(false);
-  const [isConfiguringKakera, setIsConfiguringKakera] = useState(false);
+  // const [isConfiguringKakera, setIsConfiguringKakera] = useState(false);
+  const [isConfiguringKakera, setIsConfiguringKakera] = useState<keyof typeof KAKERAS | "all" | null>(null);
   let [cantRunReason] = useState("");
 
   /// Bot state
@@ -54,16 +25,35 @@ function App() {
   const [preferences, setPreferences] = useState<Preferences>({
     useUsers: "logged",
     tokenList: [],
-    rollEnabled: true,
-    rollType: "wx",
-    notificationType: "sound",
-    notifications: new Set(),
     languague: "en",
     reactionType: "reaction",
-    claimDelay: 0,
-    kakeraDelay: 0,
-    claimDelayRandom: false,
-    kakeraDelayRandom: false
+    notifications: {
+      type: "sound",
+      enabled: new Set()
+    },
+    roll: {
+      enabled: true,
+      type: "wx"
+    },
+    claim: {
+      delay: 0,
+      delayRandom: false
+    },
+    kakera: {
+      delay: 0,
+      delayRandom: false,
+      each: {
+        PURPLE: { enabled: false },
+        BLUE: { enabled: false },
+        CYAN: { enabled: false },
+        GREEN: { enabled: false },
+        YELLOW: { enabled: false },
+        ORANGE: { enabled: false },
+        RED: { enabled: false },
+        RAINBOW: { enabled: false },
+        LIGHT: { enabled: false },
+      }
+    }
   });
 
   /// GUI
@@ -107,7 +97,7 @@ function App() {
   };
 
   const handleSoundToggle: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-    preferences.notifications[e.target.checked ? "add" : "delete"](e.target.id.replace("sound-", "") as PrefNotification);
+    preferences.notifications.enabled[e.target.checked ? "add" : "delete"](e.target.id.replace("sound-", "") as PrefNotification);
     setPreferences({ ...preferences });
   };
 
@@ -219,8 +209,8 @@ function App() {
           <div className="item-wrapper inner-0">
             <span>Roll</span>
             <div className="flex-inline-wrapper">
-              <input type="checkbox" checked={preferences.rollEnabled} onChange={(e) => setPreferences({ ...preferences, rollEnabled: e.target.checked })} />
-              <select value={preferences.rollType} onChange={(e) => setPreferences({ ...preferences, rollType: e.target.value as PrefRollType })}>
+              <input type="checkbox" checked={preferences.roll.enabled} onChange={(e) => setPreferences(pref => { pref.roll.enabled = e.target.checked; return { ...pref } })} />
+              <select value={preferences.roll.type} onChange={(e) => setPreferences(pref => { pref.roll.type = e.target.value as PrefRollType; return { ...pref } })}>
                 <option value="wx">wx</option>
                 <option value="wa">wa</option>
                 <option value="wg">wg</option>
@@ -241,40 +231,65 @@ function App() {
             <>
               <div className="item-wrapper inner-1">
                 <span>Delay</span>
-                <span>{preferences.claimDelay}s</span>
-                <input type="range" min={0} max={8.1} step={.1} value={preferences.claimDelay}
+                <span>{preferences.claim.delay}s</span>
+                <input type="range" min={0} max={8.1} step={.1} value={preferences.claim.delay}
                   onChange={(e) => {
                     const delay = Number(e.target.value);
-                    setPreferences({ ...preferences, claimDelay: Number(e.target.value), claimDelayRandom: delay > 0 ? preferences.claimDelayRandom : false })
+                    setPreferences({ ...preferences, claim: { delay: delay, delayRandom: delay > 0 ? preferences.claim.delayRandom : false } })
                   }} />
               </div>
               <div className="item-wrapper inner-1" data-tooltip="Random delay between 0 and the config">
                 <span>Random</span>
-                <input type="checkbox" checked={preferences.claimDelayRandom} disabled={preferences.claimDelay === 0} onChange={(e) => setPreferences({ ...preferences, claimDelayRandom: e.target.checked })} />
+                <input type="checkbox" checked={preferences.claim.delayRandom} disabled={preferences.claim.delay === 0} onChange={(e) => setPreferences(pref => { pref.claim.delayRandom = e.target.checked; return { ...pref } })} />
               </div>
             </>
           }
           <div className="item-wrapper inner-0">
             <span>Kakera</span>
-            <button {...(isConfiguringKakera && { className: "toggle" })} onClick={() => setIsConfiguringKakera(!isConfiguringKakera)}>
+            <button {...(isConfiguringKakera && { className: "toggle" })} onClick={() => setIsConfiguringKakera(current => !current ? "all" : null)}>
               {SVGS.ARROW}
             </button>
           </div>
           {
             isConfiguringKakera &&
             <>
+              {
+                Object.keys(KAKERAS).map((_kakera, i) => {
+                  const kakera = _kakera as keyof typeof KAKERAS;
+
+                  return (
+                    <>
+                      <div className="item-wrapper inner-1" key={`kkcfg-${i}`}>
+                        <img className="emoji" src={`https://cdn.discordapp.com/emojis/${KAKERAS[kakera].imgSrc}.webp?quality=lossless`} alt="" />
+                        <div className="flex-inline-wrapper">
+                          <input type="checkbox" checked={preferences.kakera.each[kakera].enabled} onChange={(e) => setPreferences(pref => { pref.kakera.each[kakera].enabled = e.target.checked; return { ...pref } })} />
+                          <button {...(isConfiguringKakera === kakera && { className: "toggle" })} onClick={() => setIsConfiguringKakera(current => current === kakera ? "all" : kakera)}>
+                            {SVGS.ARROW}
+                          </button>
+                        </div>
+                      </div>
+                      {
+                        isConfiguringKakera === kakera &&
+                        <div className="item-wrapper inner-2">
+                          <span>Who will claim</span>
+                        </div>
+                      }
+                    </>
+                  )
+                })
+              }
               <div className="item-wrapper inner-1">
                 <span>Delay</span>
-                <span>{preferences.kakeraDelay}s</span>
-                <input type="range" min={0} max={8.1} step={.1} value={preferences.kakeraDelay}
+                <span>{preferences.kakera.delay}s</span>
+                <input type="range" min={0} max={8.1} step={.1} value={preferences.kakera.delay}
                   onChange={(e) => {
                     const delay = Number(e.target.value);
-                    setPreferences({ ...preferences, kakeraDelay: Number(e.target.value), kakeraDelayRandom: delay > 0 ? preferences.kakeraDelayRandom : false })
+                    setPreferences({ ...preferences, kakera: { ...preferences.kakera, delay: delay, delayRandom: delay > 0 ? preferences.kakera.delayRandom : false } })
                   }} />
               </div>
               <div className="item-wrapper inner-1" data-tooltip="Random delay between 0 and the config">
                 <span>Random</span>
-                <input type="checkbox" checked={preferences.kakeraDelayRandom} disabled={preferences.kakeraDelay === 0} onChange={(e) => setPreferences({ ...preferences, kakeraDelayRandom: e.target.checked })} />
+                <input type="checkbox" checked={preferences.kakera.delayRandom} disabled={preferences.kakera.delay === 0} onChange={(e) => setPreferences(pref => { pref.kakera.delayRandom = e.target.checked; return { ...pref } })} />
               </div>
             </>
           }
@@ -289,7 +304,7 @@ function App() {
             <>
               <div className="item-wrapper inner-1">
                 <span>Notification type</span>
-                <select value={preferences.notificationType} onChange={(e) => setPreferences({ ...preferences, notificationType: e.target.value as PrefNotificationType })}>
+                <select value={preferences.notifications.type} onChange={(e) => setPreferences(pref => { pref.notifications.type = e.target.value as PrefNotificationType; return { ...pref } })}>
                   <option value="sound">Sound</option>
                   <option value="popup">Popup</option>
                   <option value="both">Both</option>
@@ -298,10 +313,10 @@ function App() {
               <div className="item-wrapper inner-1">
                 <div id="soundlist" className="list">
                   {
-                    Object.keys(E_NOTIFICATIONS).map((notification) =>
+                    Object.keys(NOTIFICATIONS).map((notification) =>
                       <div key={`soundchk-${notification}`}>
-                        <input type="checkbox" id={`sound-${notification}`} checked={preferences.notifications.has(notification as PrefNotification)} onChange={handleSoundToggle} />
-                        <label htmlFor={`sound-${notification}`}>{E_NOTIFICATIONS[notification as PrefNotification]}</label>
+                        <input type="checkbox" id={`sound-${notification}`} checked={preferences.notifications.enabled.has(notification as PrefNotification)} onChange={handleSoundToggle} />
+                        <label htmlFor={`sound-${notification}`}>{NOTIFICATIONS[notification as PrefNotification]}</label>
                       </div>
                     )
                   }

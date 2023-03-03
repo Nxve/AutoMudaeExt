@@ -51,10 +51,19 @@ header span {
   background-color: var(--primary-600);
 }
 
-.item-wrapper.inner-1 {
+.item-wrapper.inner-1,
+.item-wrapper.inner-2 {
   font-weight: 500;
+}
+
+.item-wrapper.inner-1 {
   font-size: .9rem;
   background-color: var(--primary-560);
+}
+
+.item-wrapper.inner-2 {
+  font-size: .8rem;
+  background-color: var(--primary-530);
 }
 
 .item-wrapper> :only-child {

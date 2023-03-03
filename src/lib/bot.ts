@@ -1,4 +1,49 @@
-import { SVGS } from "./svgs"
+import { SVGS } from "./svgs";
+import { KAKERAS } from "./mudae";
+
+export const NOTIFICATIONS = {
+    "foundcharacter": "Found character",
+    "claimcharacter": "Claim character",
+    "soulmate": "New soulmate",
+    "cantclaim": "Can't claim character",
+    "wishsteal": "Wish steal",
+    "cantroll": "Can't roll and can still marry"
+} as const;
+
+export type PrefUseUsers = "logged" | "tokenlist";
+export type PrefRollType = "wx" | "wa" | "wg" | "hx" | "ha" | "hg";
+export type PrefNotificationType = "sound" | "popup" | "both";
+export type PrefNotification = keyof typeof NOTIFICATIONS;
+export type PrefLanguage = "en" | "fr" | "es" | "pt-br";
+export type PrefReactionType = "reaction" | "button";
+
+export interface Preferences {
+    useUsers: PrefUseUsers;
+    tokenList: string[];
+    languague: PrefLanguage;
+    reactionType: PrefReactionType;
+    notifications: {
+        type: PrefNotificationType
+        enabled: Set<PrefNotification>
+    }
+    roll: {
+        enabled: boolean,
+        type: PrefRollType
+    }
+    claim: {
+        delay: number
+        delayRandom: boolean
+    }
+    kakera: {
+        delay: number
+        delayRandom: boolean
+        each: {
+            [kakeraCfg in keyof typeof KAKERAS]: {
+                enabled: boolean
+            }
+        }
+    }
+};
 
 interface BotStates {
     [state: string]: {
