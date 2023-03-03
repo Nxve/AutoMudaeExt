@@ -843,3 +843,10 @@
     --deprecated-text-input-border-disabled: var(--primary-700);
     --deprecated-text-input-prefix: var(--primary-200);
 }
+
+.emoji {
+    object-fit: contain;
+    width: 1.375em;
+    height: 1.375em;
+    vertical-align: bottom;
+}
