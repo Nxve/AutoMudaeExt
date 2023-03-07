@@ -74,11 +74,11 @@ header span {
   padding-left: var(--items-padding-inline);
 }
 
-.item-wrapper > button {
+.item-wrapper>button {
   padding: 4px var(--items-padding-inline);
 }
 
-.item-wrapper input[type=range]{
+.item-wrapper input[type=range] {
   width: 50%;
 }
 
@@ -123,7 +123,7 @@ button:has(svg:only-child) {
   height: 24px;
 }
 
-button > svg:only-child {
+button>svg:only-child {
   max-width: 16px;
   max-height: 16px;
 }
@@ -170,12 +170,47 @@ label {
   background-color: var(--primary-500);
 }
 
-#tokenlist-add:hover {
-  color: var(--green-300);
+.button-green:hover {
+  color: var(--green-300) !important;
 }
 
-#tokenlist-clear:hover {
-  color: var(--red-400);
+.button-red:hover {
+  color: var(--red-400) !important;
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  /* --value: 80%; */
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+  --fillColor: var(--brand-500);
+  --bgColor: var(--primary-400);
+  width: 300px;
+  height: 5px;
+  background: linear-gradient(to right, var(--fillColor) 0%, var(--fillColor) var(--value), var(--bgColor) var(--value), var(--bgColor) 100%);
+  border: none;
+  border-radius: 3px;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 18px;
+  top: 50%;
+  margin-top: -6px;
+  border-radius: 3px;
+  background-color: var(--white-500);
+  border: 1px solid var(--primary-200);
+  -webkit-box-shadow: 0 3px 1px 0 hsl(var(--black-500-hsl)/.05),0 2px 2px 0 hsl(var(--black-500-hsl)/.1),0 3px 3px 0 hsl(var(--black-500-hsl)/.05);
+  box-shadow: 0 3px 1px 0 hsl(var(--black-500-hsl)/.05),0 2px 2px 0 hsl(var(--black-500-hsl)/.1),0 3px 3px 0 hsl(var(--black-500-hsl)/.05);
+  cursor: ew-resize;
+}
+
+input[type=range]:focus {
+  outline: none;
 }
 
 /* Generic structures */
@@ -193,7 +228,7 @@ label {
   font-size: .8em;
 }
 
-.list > div:has(label) {
+.list>div:has(label) {
   display: flex;
   align-items: center;
 }
@@ -220,6 +255,11 @@ label {
 }
 
 @keyframes opacity-up {
-  0% { opacity: 0; } 
-  100% { opacity: 1;}
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }

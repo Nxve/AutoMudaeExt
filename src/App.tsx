@@ -16,6 +16,7 @@ function App() {
   const [isConfiguringClaim, setIsConfiguringClaim] = useState(false);
   // const [isConfiguringKakera, setIsConfiguringKakera] = useState(false);
   const [isConfiguringKakera, setIsConfiguringKakera] = useState<keyof typeof KAKERAS | "all" | null>(null);
+  const [isConfiguringKakeraClaimList, setIsConfiguringKakeraClaimList] = useState<keyof typeof KAKERAS | "none">("none");
   let [cantRunReason] = useState("");
 
   /// Bot state
@@ -181,10 +182,10 @@ function App() {
                   {
                     isConfiguringTokenlist &&
                     <>
-                      <button id="tokenlist-clear" data-tooltip="Clear" onClick={tokenListClear}>
+                      <button className="button-red" data-tooltip="Clear" onClick={tokenListClear}>
                         {SVGS.X}
                       </button>
-                      <button id="tokenlist-add" data-tooltip="Add" onClick={tokenListAdd}>
+                      <button className="button-green" data-tooltip="Add" onClick={tokenListAdd}>
                         {SVGS.PLUS}
                       </button>
                     </>
@@ -197,7 +198,7 @@ function App() {
               {
                 isConfiguringTokenlist &&
                 <div className="item-wrapper inner-1">
-                  <div id="tokenlist" className="list">
+                  <div className="list">
                     {preferences.tokenList.map((token, i) =>
                       <input type="text" spellCheck="false" value={token} onChange={(e) => tokenListUpdate(i, e.target.value)} onBlur={(e) => tokenListValidate(i)} />
                     )}
@@ -233,6 +234,7 @@ function App() {
                 <span>Delay</span>
                 <span>{preferences.claim.delay}s</span>
                 <input type="range" min={0} max={8.1} step={.1} value={preferences.claim.delay}
+                  style={{ "--value": (preferences.claim.delay * 100 / 8.1) + "%" } as React.CSSProperties}
                   onChange={(e) => {
                     const delay = Number(e.target.value);
                     setPreferences({ ...preferences, claim: { delay: delay, delayRandom: delay > 0 ? preferences.claim.delayRandom : false } })
@@ -270,9 +272,24 @@ function App() {
                       </div>
                       {
                         isConfiguringKakera === kakera &&
-                        <div className="item-wrapper inner-2">
-                          <span>Who will claim</span>
-                        </div>
+                        <>
+                          <div className="item-wrapper inner-2">
+                            <span>Who will claim</span>
+                            <div className="flex-inline-wrapper">
+                              <button className="button-red" data-tooltip="Clear" onClick={tokenListClear}>
+                                {SVGS.X}
+                              </button>
+                              <button className="button-green" data-tooltip="Add" onClick={tokenListAdd}>
+                                {SVGS.PLUS}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="item-wrapper inner-2">
+                            <div className="list">
+                              <input type="text" spellCheck="false" />
+                            </div>
+                          </div>
+                        </>
                       }
                     </>
                   )
@@ -282,9 +299,10 @@ function App() {
                 <span>Delay</span>
                 <span>{preferences.kakera.delay}s</span>
                 <input type="range" min={0} max={8.1} step={.1} value={preferences.kakera.delay}
+                  style={{ "--value": (preferences.kakera.delay * 100 / 8.1) + "%" } as React.CSSProperties}
                   onChange={(e) => {
                     const delay = Number(e.target.value);
-                    setPreferences({ ...preferences, kakera: { ...preferences.kakera, delay: delay, delayRandom: delay > 0 ? preferences.kakera.delayRandom : false } })
+                    setPreferences({ ...preferences, kakera: { ...preferences.kakera, delay: delay, delayRandom: delay > 0 ? preferences.kakera.delayRandom : false } });
                   }} />
               </div>
               <div className="item-wrapper inner-1" data-tooltip="Random delay between 0 and the config">
