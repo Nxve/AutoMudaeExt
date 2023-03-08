@@ -12,11 +12,9 @@ function App() {
   const [isConfiguringBOT, setIsConfiguringBOT] = useState(false);
   const [isConfiguringGuild, setIsConfiguringGuild] = useState(false);
   const [isConfiguringTokenlist, setIsConfiguringTokenlist] = useState(false);
-  const [isConfiguringNotifications, setIsConfiguringNotifications] = useState(false);
   const [isConfiguringClaim, setIsConfiguringClaim] = useState(false);
-  // const [isConfiguringKakera, setIsConfiguringKakera] = useState(false);
-  const [isConfiguringKakera, setIsConfiguringKakera] = useState<keyof typeof KAKERAS | "all" | null>(null);
-  const [isConfiguringKakeraClaimList, setIsConfiguringKakeraClaimList] = useState<keyof typeof KAKERAS | "none">("none");
+  const [isConfiguringKakera, setIsConfiguringKakera] = useState(false);
+  const [isConfiguringNotifications, setIsConfiguringNotifications] = useState(false);
   let [cantRunReason] = useState("");
 
   /// Bot state
@@ -43,24 +41,24 @@ function App() {
     kakera: {
       delay: 0,
       delayRandom: false,
-      each: {
-        PURPLE: { enabled: false },
-        BLUE: { enabled: false },
-        CYAN: { enabled: false },
-        GREEN: { enabled: false },
-        YELLOW: { enabled: false },
-        ORANGE: { enabled: false },
-        RED: { enabled: false },
-        RAINBOW: { enabled: false },
-        LIGHT: { enabled: false },
-      }
+      // each: {
+      //   PURPLE: { enabled: false },
+      //   BLUE: { enabled: false },
+      //   CYAN: { enabled: false },
+      //   GREEN: { enabled: false },
+      //   YELLOW: { enabled: false },
+      //   ORANGE: { enabled: false },
+      //   RED: { enabled: false },
+      //   RAINBOW: { enabled: false },
+      //   LIGHT: { enabled: false },
+      // }
     }
   });
 
   /// GUI
 
   const isWide = (): boolean => {
-    return isConfiguringBOT && isConfiguringTokenlist;
+    return isConfiguringBOT && (isConfiguringTokenlist || isConfiguringKakera);
   };
 
   const tokenListAdd = () => {
@@ -90,16 +88,80 @@ function App() {
     //# Save
   };
 
-  const tokenListToggleVisibility = () => {
-    setIsConfiguringTokenlist(!isConfiguringTokenlist);
-
-    preferences.tokenList = preferences.tokenList.filter(token => isTokenValid(token));
-    setPreferences({ ...preferences });
-  };
-
   const handleSoundToggle: React.ChangeEventHandler<HTMLInputElement> = (e) => {
     preferences.notifications.enabled[e.target.checked ? "add" : "delete"](e.target.id.replace("sound-", "") as PrefNotification);
     setPreferences({ ...preferences });
+  };
+
+  const toggleMenuCategory = (category: string) => {
+    const setters = new Set([setIsConfiguringBOT, setIsConfiguringGuild]);
+    let setter;
+
+    switch (category) {
+      case "bot":
+        setter = setIsConfiguringBOT;
+        break;
+      case "guild":
+        setter = setIsConfiguringGuild;
+        break;
+      default:
+        break;
+    }
+
+    if (setter) {
+      setters.delete(setter);
+
+      setter(current => {
+        if (!current) {
+          for (const setOtherCategory of setters) {
+            setOtherCategory(false);
+          }
+        }
+
+        return !current;
+      });
+    }
+  };
+
+  const toggleMenuSubcategory = (subcategory: string) => {
+    const setters = new Set([setIsConfiguringTokenlist, setIsConfiguringClaim, setIsConfiguringKakera, setIsConfiguringNotifications]);
+    let setter;
+
+    switch (subcategory) {
+      case "tokenlist":
+        setter = setIsConfiguringTokenlist;
+
+        if (isConfiguringTokenlist){
+          preferences.tokenList = preferences.tokenList.filter(token => isTokenValid(token));
+          setPreferences({ ...preferences });
+        }
+        break;
+      case "claim":
+        setter = setIsConfiguringClaim;
+        break;
+      case "kakera":
+        setter = setIsConfiguringKakera;
+        break;
+      case "notifications":
+        setter = setIsConfiguringNotifications;
+        break;
+      default:
+        break;
+    }
+
+    if (setter) {
+      setters.delete(setter);
+
+      setter(current => {
+        if (!current) {
+          for (const setOtherCategory of setters) {
+            setOtherCategory(false);
+          }
+        }
+
+        return !current;
+      });
+    }
   };
 
   /// BOT
@@ -157,7 +219,7 @@ function App() {
         <span>AutoMudae</span>
       </header>
       <div className="item-wrapper">
-        <button {...(isConfiguringBOT && { className: "toggle" })} onClick={() => setIsConfiguringBOT(!isConfiguringBOT)}>
+        <button {...(isConfiguringBOT && { className: "toggle" })} onClick={() => toggleMenuCategory("bot")}>
           {SVGS.GEAR}
           <span>Bot Config</span>
           {SVGS.ARROW}
@@ -190,7 +252,7 @@ function App() {
                       </button>
                     </>
                   }
-                  <button {...(isConfiguringTokenlist && { className: "toggle" })} onClick={tokenListToggleVisibility}>
+                  <button {...(isConfiguringTokenlist && { className: "toggle" })} onClick={() => toggleMenuSubcategory("tokenlist")}>
                     {SVGS.ARROW}
                   </button>
                 </div>
@@ -223,7 +285,7 @@ function App() {
           </div>
           <div className="item-wrapper inner-0">
             <span>Claim</span>
-            <button {...(isConfiguringClaim && { className: "toggle" })} onClick={() => setIsConfiguringClaim(!isConfiguringClaim)}>
+            <button {...(isConfiguringClaim && { className: "toggle" })} onClick={() => toggleMenuSubcategory("claim")}>
               {SVGS.ARROW}
             </button>
           </div>
@@ -248,72 +310,32 @@ function App() {
           }
           <div className="item-wrapper inner-0">
             <span>Kakera</span>
-            <button {...(isConfiguringKakera && { className: "toggle" })} onClick={() => setIsConfiguringKakera(current => !current ? "all" : null)}>
+            <button {...(isConfiguringKakera && { className: "toggle" })} onClick={() => toggleMenuSubcategory("kakera")}>
               {SVGS.ARROW}
             </button>
           </div>
           {
             isConfiguringKakera &&
             <>
-              {
-                Object.keys(KAKERAS).map((_kakera, i) => {
-                  const kakera = _kakera as keyof typeof KAKERAS;
-
-                  return (
-                    <>
-                      <div className="item-wrapper inner-1" key={`kkcfg-${i}`}>
-                        <img className="emoji" src={`https://cdn.discordapp.com/emojis/${KAKERAS[kakera].imgSrc}.webp?quality=lossless`} alt="" />
-                        <div className="flex-inline-wrapper">
-                          <input type="checkbox" checked={preferences.kakera.each[kakera].enabled} onChange={(e) => setPreferences(pref => { pref.kakera.each[kakera].enabled = e.target.checked; return { ...pref } })} />
-                          <button {...(isConfiguringKakera === kakera && { className: "toggle" })} onClick={() => setIsConfiguringKakera(current => current === kakera ? "all" : kakera)}>
-                            {SVGS.ARROW}
-                          </button>
-                        </div>
-                      </div>
-                      {
-                        isConfiguringKakera === kakera &&
-                        <>
-                          <div className="item-wrapper inner-2">
-                            <span>Who will claim</span>
-                            <div className="flex-inline-wrapper">
-                              <button className="button-red" data-tooltip="Clear" onClick={tokenListClear}>
-                                {SVGS.X}
-                              </button>
-                              <button className="button-green" data-tooltip="Add" onClick={tokenListAdd}>
-                                {SVGS.PLUS}
-                              </button>
-                            </div>
-                          </div>
-                          <div className="item-wrapper inner-2">
-                            <div className="list">
-                              <input type="text" spellCheck="false" />
-                            </div>
-                          </div>
-                        </>
-                      }
-                    </>
-                  )
-                })
-              }
-              <div className="item-wrapper inner-1">
-                <span>Delay</span>
-                <span>{preferences.kakera.delay}s</span>
-                <input type="range" min={0} max={8.1} step={.1} value={preferences.kakera.delay}
-                  style={{ "--value": (preferences.kakera.delay * 100 / 8.1) + "%" } as React.CSSProperties}
-                  onChange={(e) => {
-                    const delay = Number(e.target.value);
-                    setPreferences({ ...preferences, kakera: { ...preferences.kakera, delay: delay, delayRandom: delay > 0 ? preferences.kakera.delayRandom : false } });
-                  }} />
-              </div>
-              <div className="item-wrapper inner-1" data-tooltip="Random delay between 0 and the config">
-                <span>Random</span>
-                <input type="checkbox" checked={preferences.kakera.delayRandom} disabled={preferences.kakera.delay === 0} onChange={(e) => setPreferences(pref => { pref.kakera.delayRandom = e.target.checked; return { ...pref } })} />
-              </div>
+              {[...preferences.tokenList, "all"].map((token, i) =>
+                <div className="item-wrapper inner-1 kakera-cfg">
+                  <span>{token === "all" ? "All users" : token.slice(0, 16) + "..."}</span>
+                  <button>
+                    {SVGS.PLUS}
+                  </button>
+                  {/* {Object.keys(KAKERAS).map((_kakera, i) => {
+                    const kakera = _kakera as keyof typeof KAKERAS;
+                    return (
+                      <img className="emoji" src={`https://cdn.discordapp.com/emojis/${KAKERAS[kakera].imgSrc}.webp?quality=lossless`} alt="" />
+                    )
+                  })} */}
+                </div>
+              )}
             </>
           }
           <div className="item-wrapper inner-0">
             <span>Notifications</span>
-            <button {...(isConfiguringNotifications && { className: "toggle" })} onClick={() => setIsConfiguringNotifications(!isConfiguringNotifications)}>
+            <button {...(isConfiguringNotifications && { className: "toggle" })} onClick={() => toggleMenuSubcategory("notifications")}>
               {SVGS.ARROW}
             </button>
           </div>
@@ -345,7 +367,7 @@ function App() {
         </>
       }
       <div className="item-wrapper">
-        <button {...(isConfiguringGuild && { className: "toggle" })} onClick={() => setIsConfiguringGuild(!isConfiguringGuild)}>
+        <button {...(isConfiguringGuild && { className: "toggle" })} onClick={() => toggleMenuCategory("guild")}>
           {SVGS.GEAR}
           <span>Guild Config</span>
           {SVGS.ARROW}

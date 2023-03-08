@@ -37,11 +37,11 @@ export interface Preferences {
     kakera: {
         delay: number
         delayRandom: boolean
-        each: {
-            [kakeraCfg in keyof typeof KAKERAS]: {
-                enabled: boolean
-            }
-        }
+        // each: {
+        //     [kakeraCfg in keyof typeof KAKERAS]: {
+        //         enabled: boolean
+        //     }
+        // }
     }
 };
 

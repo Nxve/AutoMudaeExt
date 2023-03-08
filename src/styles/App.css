@@ -2,8 +2,9 @@
 
 #App {
   --items-padding-inline: 4px;
+  --app-width: 200px;
 
-  width: 200px;
+  width: var(--app-width);
   background-color: var(--primary-700);
   transition: width 200ms;
 }
@@ -204,13 +205,17 @@ input[type=range]::-webkit-slider-thumb {
   border-radius: 3px;
   background-color: var(--white-500);
   border: 1px solid var(--primary-200);
-  -webkit-box-shadow: 0 3px 1px 0 hsl(var(--black-500-hsl)/.05),0 2px 2px 0 hsl(var(--black-500-hsl)/.1),0 3px 3px 0 hsl(var(--black-500-hsl)/.05);
-  box-shadow: 0 3px 1px 0 hsl(var(--black-500-hsl)/.05),0 2px 2px 0 hsl(var(--black-500-hsl)/.1),0 3px 3px 0 hsl(var(--black-500-hsl)/.05);
+  -webkit-box-shadow: 0 3px 1px 0 hsl(var(--black-500-hsl)/.05), 0 2px 2px 0 hsl(var(--black-500-hsl)/.1), 0 3px 3px 0 hsl(var(--black-500-hsl)/.05);
+  box-shadow: 0 3px 1px 0 hsl(var(--black-500-hsl)/.05), 0 2px 2px 0 hsl(var(--black-500-hsl)/.1), 0 3px 3px 0 hsl(var(--black-500-hsl)/.05);
   cursor: ew-resize;
 }
 
 input[type=range]:focus {
   outline: none;
+}
+
+.kakera-cfg>span {
+  font-size: .8rem;
 }
 
 /* Generic structures */
@@ -262,4 +267,13 @@ input[type=range]:focus {
   100% {
     opacity: 1;
   }
+}
+
+/* Discord Classes Overwriting */
+
+.emoji {
+  object-fit: contain;
+  width: 1rem;
+  height: 1rem;
+  vertical-align: bottom;
 }
