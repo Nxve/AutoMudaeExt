@@ -46,8 +46,10 @@ const KAKERAS = {
     }
 };
 
+export type KAKERA = keyof typeof KAKERAS;
+
 for (const _kakera in KAKERAS) {
-    const kakera = _kakera as keyof typeof KAKERAS;
+    const kakera = _kakera as KAKERA;
 
     KAKERAS[kakera].emoji = `${KAKERAS[kakera].internalName}%3A${KAKERAS[kakera].imgSrc}`;
 }

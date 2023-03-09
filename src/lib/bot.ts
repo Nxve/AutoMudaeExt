@@ -37,11 +37,7 @@ export interface Preferences {
     kakera: {
         delay: number
         delayRandom: boolean
-        // each: {
-        //     [kakeraCfg in keyof typeof KAKERAS]: {
-        //         enabled: boolean
-        //     }
-        // }
+        perToken: Map<string, Set<keyof typeof KAKERAS>>
     }
 };
 
