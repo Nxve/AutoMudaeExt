@@ -17,6 +17,7 @@ function App() {
   const [isConfiguringKakera, setIsConfiguringKakera] = useState(false);
   const [isConfiguringNotifications, setIsConfiguringNotifications] = useState(false);
   const [configuringKakeraPerToken, setConfiguringKakeraPerToken] = useState("");
+  const [tokenList, setTokenList] = useState<string[]>([]);
   let [cantRunReason] = useState("");
 
   /// Bot state
@@ -25,7 +26,7 @@ function App() {
 
   const [preferences, setPreferences] = useState<Preferences>({
     useUsers: "logged",
-    tokenList: [],
+    tokenList: new Set(),
     languague: "en",
     reactionType: "reaction",
     notifications: {
@@ -54,32 +55,32 @@ function App() {
   };
 
   const tokenListAdd = () => {
-    preferences.tokenList.push("");
-    setPreferences({ ...preferences });
+    tokenList.push("");
+    setTokenList([...tokenList]);
   };
 
   const tokenListClear = () => {
-    preferences.tokenList.length = 0;
+    preferences.tokenList = new Set();
     setPreferences({ ...preferences });
-
-    //# Save
+    setTokenList([]);
   };
 
-  const tokenListUpdate = (tokenIndex: number, newToken: string) => {
-    preferences.tokenList[tokenIndex] = newToken;
-    setPreferences({ ...preferences });
-  };
+  const validateTokenInput = (index: number, token: string) => {
+    const isValid = isTokenValid(token);
 
-  const tokenListValidate = (tokenIndex: number) => {
-    const token = preferences.tokenList[tokenIndex];
-
-    if (!isTokenValid(token)) {
-      preferences.tokenList.splice(tokenIndex, 1);
+    if (index >= preferences.tokenList.size) {
+      if (isValid) {
+        preferences.tokenList.add(token);
+        setPreferences({ ...preferences });
+      }
+    } else {
+      const arrTokenList = [...preferences.tokenList];
+      arrTokenList.splice(index, 1, isValid ? token : undefined as unknown as string);
+      preferences.tokenList = new Set([...arrTokenList]);
       setPreferences({ ...preferences });
-      return;
     }
 
-    //# Save
+    setTokenList([...preferences.tokenList]);
   };
 
   const handleSoundToggle: React.ChangeEventHandler<HTMLInputElement> = (e) => {
@@ -140,21 +141,20 @@ function App() {
 
     if (setter) {
       if (isConfiguringTokenlist) {
-        preferences.tokenList = preferences.tokenList.filter(token => {
+        preferences.tokenList = new Set([...preferences.tokenList].filter(token => {
           const isValid = isTokenValid(token);
 
           if (isValid && !preferences.kakera.perToken.has(token)) {
             preferences.kakera.perToken.set(token, new Set());
-            console.log("Set new token to perToken:", token);
           }
 
           return isValid;
-        });
+        }));
 
         const unusedTokens: string[] = [];
 
         for (const [token] of preferences.kakera.perToken) {
-          if (token !== "all" && !preferences.tokenList.includes(token)) unusedTokens.push(token);
+          if (token !== "all" && !preferences.tokenList.has(token)) unusedTokens.push(token);
         }
 
         unusedTokens.forEach(token => preferences.kakera.perToken.delete(token));
@@ -203,7 +203,7 @@ function App() {
 
     if (botState === "idle") {
       if (preferences.useUsers === "tokenlist" &&
-        (preferences.tokenList.length < 1 || preferences.tokenList.some(token => !isTokenValid(token)))
+        (preferences.tokenList.size < 1 || [...preferences.tokenList].some(token => !isTokenValid(token)))
       ) {
         cantRunReason = "You should use logged users or have a valid token list";
 
@@ -287,8 +287,8 @@ function App() {
                 isConfiguringTokenlist &&
                 <div className="item-wrapper inner-1">
                   <div className="list">
-                    {preferences.tokenList.map((token, i) =>
-                      <input type="text" spellCheck="false" value={token} onChange={(e) => tokenListUpdate(i, e.target.value)} onBlur={(e) => tokenListValidate(i)} key={`token-${i}`} />
+                    {tokenList.map((token, i) =>
+                      <input type="text" spellCheck="false" value={token} onChange={(e) => { tokenList[i] = e.target.value; setTokenList([...tokenList]) }} onBlur={(e) => validateTokenInput(i, e.target.value)} key={`token-${i}`} />
                     )}
                   </div>
                 </div>
@@ -346,7 +346,7 @@ function App() {
               {(preferences.useUsers === "tokenlist" ? [...preferences.kakera.perToken.keys()] : ["all"]).map((token, i) =>
                 <div className="item-wrapper inner-1 kakera-cfg" key={`kkcfg-${i}`}>
                   <span>
-                    {token === "all" ? "All users" : token.slice(0, 16) + "..."}</span>
+                    {token === "all" ? "All users" : `${token.slice(0, 7)}...${token.slice(-7)}`}</span>
                   <div className="flex-inline-wrapper">
                     {
                       configuringKakeraPerToken === token ?

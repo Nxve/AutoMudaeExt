@@ -19,7 +19,7 @@ export type PrefReactionType = "reaction" | "button";
 
 export interface Preferences {
     useUsers: PrefUseUsers;
-    tokenList: string[];
+    tokenList: Set<string>;
     languague: PrefLanguage;
     reactionType: PrefReactionType;
     notifications: {
