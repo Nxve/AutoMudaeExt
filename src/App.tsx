@@ -43,18 +43,7 @@ function App() {
     kakera: {
       delay: 0,
       delayRandom: false,
-      perToken: new Map()
-      // each: {
-      //   PURPLE: { enabled: false },
-      //   BLUE: { enabled: false },
-      //   CYAN: { enabled: false },
-      //   GREEN: { enabled: false },
-      //   YELLOW: { enabled: false },
-      //   ORANGE: { enabled: false },
-      //   RED: { enabled: false },
-      //   RAINBOW: { enabled: false },
-      //   LIGHT: { enabled: false },
-      // }
+      perToken: new Map([["all", new Set()]])
     }
   });
 
@@ -70,7 +59,7 @@ function App() {
   };
 
   const tokenListClear = () => {
-    preferences.tokenList = [];
+    preferences.tokenList.length = 0;
     setPreferences({ ...preferences });
 
     //# Save
@@ -135,11 +124,6 @@ function App() {
     switch (subcategory) {
       case "tokenlist":
         setter = setIsConfiguringTokenlist;
-
-        if (isConfiguringTokenlist) {
-          preferences.tokenList = preferences.tokenList.filter(token => isTokenValid(token));
-          setPreferences({ ...preferences });
-        }
         break;
       case "claim":
         setter = setIsConfiguringClaim;
@@ -155,6 +139,29 @@ function App() {
     }
 
     if (setter) {
+      if (isConfiguringTokenlist) {
+        preferences.tokenList = preferences.tokenList.filter(token => {
+          const isValid = isTokenValid(token);
+
+          if (isValid && !preferences.kakera.perToken.has(token)) {
+            preferences.kakera.perToken.set(token, new Set());
+            console.log("Set new token to perToken:", token);
+          }
+
+          return isValid;
+        });
+
+        const unusedTokens: string[] = [];
+
+        for (const [token] of preferences.kakera.perToken) {
+          if (token !== "all" && !preferences.tokenList.includes(token)) unusedTokens.push(token);
+        }
+
+        unusedTokens.forEach(token => preferences.kakera.perToken.delete(token));
+
+        setPreferences({ ...preferences });
+      }
+
       setters.delete(setter);
 
       setter(current => {
@@ -170,6 +177,8 @@ function App() {
   };
 
   const toggleKakeraForToken = (token: string, kakera: KAKERA) => {
+    setConfiguringKakeraPerToken("");
+
     if (!preferences.kakera.perToken.has(token)) return;
 
     const kakeras = preferences.kakera.perToken.get(token) as Set<KAKERA>;
@@ -334,9 +343,10 @@ function App() {
           {
             isConfiguringKakera &&
             <>
-              {[...preferences.tokenList, "all"].map((token, i) =>
+              {(preferences.useUsers === "tokenlist" ? [...preferences.kakera.perToken.keys()] : ["all"]).map((token, i) =>
                 <div className="item-wrapper inner-1 kakera-cfg" key={`kkcfg-${i}`}>
-                  <span>{token === "all" ? "All users" : token.slice(0, 16) + "..."}</span>
+                  <span>
+                    {token === "all" ? "All users" : token.slice(0, 16) + "..."}</span>
                   <div className="flex-inline-wrapper">
                     {
                       configuringKakeraPerToken === token ?
@@ -349,20 +359,15 @@ function App() {
                           )
                         })
                         :
-                        <>
-                          {Object.keys(KAKERAS).map((_kakera, i) => {
-                            const kakera = _kakera as keyof typeof KAKERAS;
-                            return (
-                              <button key={`kkcfg-img-${i}`}>
-                                <img className="emoji" src={`https://cdn.discordapp.com/emojis/${KAKERAS[kakera].imgSrc}.webp?quality=lossless`} alt="" />
-                              </button>
-                            )
-                          })}
-                          <button onClick={() => setConfiguringKakeraPerToken(token)}>
-                            {SVGS.GEAR}
+                        [...(preferences.kakera.perToken.get(token) as Set<KAKERA>)].map((kakera, i) =>
+                          <button key={`kkcfg-img-${i}`}>
+                            <img className="emoji" src={`https://cdn.discordapp.com/emojis/${KAKERAS[kakera].imgSrc}.webp?quality=lossless`} alt="" />
                           </button>
-                        </>
+                        )
                     }
+                    <button onClick={() => setConfiguringKakeraPerToken(current => !current ? token : "")}>
+                      {SVGS.GEAR}
+                    </button>
                   </div>
                   {/* {Object.keys(KAKERAS).map((_kakera, i) => {
                     const kakera = _kakera as keyof typeof KAKERAS;

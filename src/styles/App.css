@@ -182,7 +182,6 @@ label {
 input[type=range] {
   -webkit-appearance: none;
   appearance: none;
-  /* --value: 80%; */
 }
 
 input[type=range]::-webkit-slider-runnable-track {
