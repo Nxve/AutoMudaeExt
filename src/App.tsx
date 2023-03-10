@@ -352,31 +352,45 @@ function App() {
                       configuringKakeraPerToken === token ?
                         Object.keys(KAKERAS).map((_kakera, i) => {
                           const kakera = _kakera as keyof typeof KAKERAS;
+
+                          if ((preferences.kakera.perToken.get(token) as Set<KAKERA>).has(kakera)) return null;
+
                           return (
-                            <button onClick={() => { toggleKakeraForToken(token, kakera) }} key={`kkcfg-btn-${i}`}>
+                            <button className="toClaim" onClick={() => { toggleKakeraForToken(token, kakera) }} key={`kkcfg-btn-${i}`}>
                               <img className="emoji" src={`https://cdn.discordapp.com/emojis/${KAKERAS[kakera].imgSrc}.webp?quality=lossless`} alt="" />
                             </button>
                           )
                         })
                         :
                         [...(preferences.kakera.perToken.get(token) as Set<KAKERA>)].map((kakera, i) =>
-                          <button key={`kkcfg-img-${i}`}>
+                          <button className="toRemove" onClick={() => { toggleKakeraForToken(token, kakera) }} key={`kkcfg-img-${i}`}>
                             <img className="emoji" src={`https://cdn.discordapp.com/emojis/${KAKERAS[kakera].imgSrc}.webp?quality=lossless`} alt="" />
                           </button>
                         )
                     }
                     <button onClick={() => setConfiguringKakeraPerToken(current => !current ? token : "")}>
-                      {SVGS.GEAR}
+                      {configuringKakeraPerToken === token ? SVGS.X : SVGS.PLUS}
                     </button>
                   </div>
-                  {/* {Object.keys(KAKERAS).map((_kakera, i) => {
-                    const kakera = _kakera as keyof typeof KAKERAS;
-                    return (
-                      <img className="emoji" src={`https://cdn.discordapp.com/emojis/${KAKERAS[kakera].imgSrc}.webp?quality=lossless`} alt="" />
-                    )
-                  })} */}
                 </div>
+
               )}
+              <div className="item-wrapper inner-1">
+                <span>Delay</span>
+                <span>{preferences.kakera.delay}s</span>
+                <input type="range" min={0} max={8.1} step={.1} value={preferences.kakera.delay}
+                  style={{ "--value": (preferences.kakera.delay * 100 / 8.1) + "%" } as React.CSSProperties}
+                  onChange={(e) => {
+                    const delay = Number(e.target.value);
+                    preferences.kakera.delay = delay;
+                    preferences.kakera.delayRandom = delay > 0 ? preferences.kakera.delayRandom : false;
+                    setPreferences({ ...preferences });
+                  }} />
+              </div>
+              <div className="item-wrapper inner-1" data-tooltip="Random delay between 0 and the config">
+                <span>Random</span>
+                <input type="checkbox" checked={preferences.kakera.delayRandom} disabled={preferences.kakera.delay === 0} onChange={(e) => setPreferences(pref => { pref.kakera.delayRandom = e.target.checked; return { ...pref } })} />
+              </div>
             </>
           }
           <div className="item-wrapper inner-0">

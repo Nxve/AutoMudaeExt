@@ -217,6 +217,18 @@ input[type=range]:focus {
   font-size: .8rem;
 }
 
+.kakera-cfg button:has(.emoji) {
+  background-color: var(--background-modifier-hover);
+}
+
+.kakera-cfg button.toRemove:hover {
+  background-color: var(--red-400);
+}
+
+.kakera-cfg button.toClaim:hover {
+  background-color: var(--green-400);
+}
+
 /* Generic structures */
 
 .flex-inline-wrapper {
