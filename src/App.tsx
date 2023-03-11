@@ -19,12 +19,6 @@ function App() {
   const [configuringKakeraPerToken, setConfiguringKakeraPerToken] = useState("");
   const [tokenList, setTokenList] = useState<string[]>([]);
   const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
-  let [cantRunReason] = useState("");
-
-  /// Bot state
-  const [discordTab, setDiscordTab] = useState<chrome.tabs.Tab>();
-  const [botState, setBotState] = useState<BotState>("unknown");
-
   const [preferences, setPreferences] = useState<Preferences>({
     useUsers: "logged",
     tokenList: new Set(),
@@ -49,6 +43,11 @@ function App() {
     }
   });
 
+  /// Bot state
+  const [discordTab, setDiscordTab] = useState<chrome.tabs.Tab>();
+  const [botState, setBotState] = useState<BotState>("unknown");
+  let [cantRunReason] = useState("");
+  
   /// GUI
 
   const isWide = (): boolean => {
@@ -194,7 +193,7 @@ function App() {
   /// BOT
 
   const canToggleRun = (): boolean => {
-    if (botState !== "idle" && botState !== "run") {
+    if (botState !== "idle" && botState !== "running" && botState !== "waiting_injection") {
       const reason = BOT_STATES[botState].cantRunReason;
 
       if (reason) cantRunReason = reason;
@@ -220,6 +219,7 @@ function App() {
   };
 
   useEffect(() => {
+    /// Load preferences from Chrome's storage
     chrome?.storage?.local.get("preferences")
       .then(result => {
         if (result && Object.hasOwn(result, "preferences") && result.preferences != null) {
@@ -257,9 +257,10 @@ function App() {
           setBotState(state)
         });
       })
-      .catch(() => {/* Handle error */ })
+      .catch(console.error)
   }, []);
 
+  /// Save preferences to Chrome's storage whenever it changes
   useEffect(() => {
     if (!hasLoadedPreferences) return;
 
