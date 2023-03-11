@@ -3,7 +3,7 @@ import { Message, MESSAGES } from "./lib/messaging";
 
 let state: BotState = "waiting_injection";
 
-const handleExtensionMessage = (message: Message, sender: chrome.runtime.MessageSender, sendResponse: (response: any) => void) => {    
+const handleExtensionMessage = (message: Message, _sender: chrome.runtime.MessageSender, sendResponse: (response: any) => void) => {    
     if (!message.id) return;
 
     switch (message.id) {

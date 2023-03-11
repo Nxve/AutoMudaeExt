@@ -61,7 +61,7 @@ const _BOT_STATES = {
     "setup": {
         buttonLabel: "Setting up..",
     },
-    "run": {
+    "running": {
         buttonSVG: "PAUSE_FILL",
         buttonLabel: "Pause"
     },
