@@ -46,7 +46,7 @@ function App() {
   /// Bot state
   const [discordTab, setDiscordTab] = useState<chrome.tabs.Tab>();
   const [botState, setBotState] = useState<BotState>("unknown");
-  let [cantRunReason] = useState("");
+  const [cantRunReason, setCantRunReason] = useState("");
   
   /// GUI
 
@@ -196,7 +196,7 @@ function App() {
     if (botState !== "idle" && botState !== "running" && botState !== "waiting_injection") {
       const reason = BOT_STATES[botState].cantRunReason;
 
-      if (reason) cantRunReason = reason;
+      if (reason && reason !== cantRunReason) setCantRunReason(reason);
 
       return false;
     }
@@ -205,7 +205,7 @@ function App() {
       if (preferences.useUsers === "tokenlist" &&
         (preferences.tokenList.size < 1 || [...preferences.tokenList].some(token => !isTokenValid(token)))
       ) {
-        cantRunReason = "You should use logged users or have a valid token list";
+        setCantRunReason("You should use logged users or have a valid token list");
 
         return false;
       }
@@ -215,7 +215,27 @@ function App() {
   };
 
   const toggleRun = () => {
+    if (!discordTab || !discordTab.id) {
+      setBotState("injection_error");
+      setCantRunReason("Couldn't find Discord tab, refresh the page and reopen the extension");
+      return;
+    }
 
+    if (botState === "waiting_injection"){
+      discordTab.autoDiscardable = false;
+
+      setBotState("setup");
+
+      chrome.tabs.sendMessage(discordTab.id, {id: MESSAGES.INJECTION, data: preferences}, (err) => {
+        if (err){
+          setBotState("injection_error");
+          setCantRunReason(err);
+          return;
+        }
+
+        setBotState("running");
+      });
+    }
   };
 
   useEffect(() => {

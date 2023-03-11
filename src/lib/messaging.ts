@@ -1,5 +1,6 @@
 export const MESSAGES = {
-    GET_STATE: "get_state"
+    GET_STATE: "get_state",
+    INJECTION: "injection"
 } as const;
 
 export interface Message {

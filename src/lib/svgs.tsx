@@ -4,6 +4,7 @@ import { ReactComponent as SVG_ARROW } from "../svg/arrow_lines.svg"
 import { ReactComponent as SVG_GEAR } from "../svg/gear.svg"
 import { ReactComponent as SVG_PLUS } from "../svg/plus.svg"
 import { ReactComponent as SVG_X } from "../svg/x.svg"
+import { ReactComponent as SVG_EXCLAMATION_DIAMOND } from "../svg/exclamation_diamond.svg"
 
 export const SVGS = {
     PAUSE_FILL: <SVG_PAUSE_FILL/>,
@@ -11,5 +12,6 @@ export const SVGS = {
     ARROW: <SVG_ARROW/>,
     GEAR: <SVG_GEAR/>,
     PLUS: <SVG_PLUS/>,
-    X: <SVG_X/>
+    X: <SVG_X/>,
+    EXCLAMATION_DIAMOND: <SVG_EXCLAMATION_DIAMOND/>
 } as const;

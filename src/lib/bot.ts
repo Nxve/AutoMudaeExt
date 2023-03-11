@@ -68,6 +68,10 @@ const _BOT_STATES = {
     "idle": {
         buttonSVG: "ARROW_FILL",
         buttonLabel: "Run"
+    },
+    "injection_error": {
+        buttonSVG: "EXCLAMATION_DIAMOND",
+        buttonLabel: "Injection error"
     }
 } as const;
 
