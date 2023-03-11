@@ -18,6 +18,7 @@ function App() {
   const [isConfiguringNotifications, setIsConfiguringNotifications] = useState(false);
   const [configuringKakeraPerToken, setConfiguringKakeraPerToken] = useState("");
   const [tokenList, setTokenList] = useState<string[]>([]);
+  const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
   let [cantRunReason] = useState("");
 
   /// Bot state
@@ -219,6 +220,27 @@ function App() {
   };
 
   useEffect(() => {
+    chrome?.storage?.local.get("preferences")
+      .then(result => {
+        if (result && Object.hasOwn(result, "preferences") && result.preferences != null) {
+          const loadedPreferences = JSON.parse(result.preferences, (_k, v) => {
+            if (typeof v === "object" && v !== null) {
+              if (v.dataType === "Map") {
+                return new Map(v.value);
+              } else if (v.dataType === "Set") {
+                return new Set(v.value);
+              }
+            }
+            return v;
+          });
+
+          setPreferences(loadedPreferences);
+          setTokenList([...loadedPreferences.tokenList]);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setHasLoadedPreferences(true));
+
     chrome?.tabs?.query({ url: "https://discord.com/channels/*", highlighted: true, currentWindow: true, status: "complete" })
       .then((tabs) => {
         if (tabs.length < 1) return;
@@ -237,6 +259,25 @@ function App() {
       })
       .catch(() => {/* Handle error */ })
   }, []);
+
+  useEffect(() => {
+    if (!hasLoadedPreferences) return;
+
+    chrome?.storage?.local.set({
+      preferences: JSON.stringify(preferences, (_k, v) => {
+        const isMap = v instanceof Map, isSet = v instanceof Set;
+
+        if (isMap || isSet) {
+          return {
+            dataType: isMap ? "Map" : "Set",
+            value: [...v]
+          };
+        }
+        return v;
+      })
+    })
+      .catch(console.error);
+  }, [preferences, hasLoadedPreferences]);
 
   return (
     <div id="App" {...isWide() && ({ className: "wide" })}>

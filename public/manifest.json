@@ -14,7 +14,8 @@
     "128": "128.png"
   },
   "permissions": [
-    "tabs"
+    "tabs",
+    "storage"
   ],
   "host_permissions": [
     "https://discord.com/channels/*"
