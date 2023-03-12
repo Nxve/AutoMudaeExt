@@ -1,7 +1,7 @@
 import type { BotState, Preferences, PrefLanguage, PrefNotification, PrefNotificationType, PrefReactionType, PrefRollType, PrefUseUsers } from "./lib/bot";
 import type { KAKERA } from "./lib/mudae";
 import React, { useEffect, useState } from "react";
-import { isTokenValid } from "./lib/utils";
+import { isTokenValid, jsonMapSetReplacer, jsonMapSetReviver } from "./lib/utils";
 import { BOT_STATES, NOTIFICATIONS } from "./lib/bot";
 import { MESSAGES } from "./lib/messaging";
 import { SVGS } from "./lib/svgs";
@@ -47,7 +47,7 @@ function App() {
   const [discordTab, setDiscordTab] = useState<chrome.tabs.Tab>();
   const [botState, setBotState] = useState<BotState>("unknown");
   const [cantRunReason, setCantRunReason] = useState("");
-  
+
   /// GUI
 
   const isWide = (): boolean => {
@@ -196,16 +196,24 @@ function App() {
     if (botState !== "idle" && botState !== "running" && botState !== "waiting_injection") {
       const reason = BOT_STATES[botState].cantRunReason;
 
-      if (reason && reason !== cantRunReason) setCantRunReason(reason);
+      if (!reason && cantRunReason) {
+        setCantRunReason("");
+      } else if (reason && reason !== "<dynamic>" && reason !== cantRunReason) {
+        setCantRunReason(reason);
+      }
 
       return false;
     }
 
-    if (botState === "idle") {
+    if (botState === "idle" || botState === "waiting_injection") {
       if (preferences.useUsers === "tokenlist" &&
         (preferences.tokenList.size < 1 || [...preferences.tokenList].some(token => !isTokenValid(token)))
       ) {
-        setCantRunReason("You should use logged users or have a valid token list");
+        const reason = "You should use logged users or have a valid token list";
+
+        if (reason !== cantRunReason) {
+          setCantRunReason(reason);
+        }
 
         return false;
       }
@@ -221,15 +229,15 @@ function App() {
       return;
     }
 
-    if (botState === "waiting_injection"){
+    if (botState === "waiting_injection") {
       discordTab.autoDiscardable = false;
 
       setBotState("setup");
 
-      chrome.tabs.sendMessage(discordTab.id, {id: MESSAGES.INJECTION, data: preferences}, (err) => {
-        if (err){
-          setBotState("injection_error");
+      chrome.tabs.sendMessage(discordTab.id, { id: MESSAGES.INJECTION, data: JSON.stringify(preferences, jsonMapSetReplacer) }, (err) => {
+        if (err) {
           setCantRunReason(err);
+          setBotState("injection_error");
           return;
         }
 
@@ -243,16 +251,7 @@ function App() {
     chrome?.storage?.local.get("preferences")
       .then(result => {
         if (result && Object.hasOwn(result, "preferences") && result.preferences != null) {
-          const loadedPreferences = JSON.parse(result.preferences, (_k, v) => {
-            if (typeof v === "object" && v !== null) {
-              if (v.dataType === "Map") {
-                return new Map(v.value);
-              } else if (v.dataType === "Set") {
-                return new Set(v.value);
-              }
-            }
-            return v;
-          });
+          const loadedPreferences = JSON.parse(result.preferences, jsonMapSetReviver);
 
           setPreferences(loadedPreferences);
           setTokenList([...loadedPreferences.tokenList]);
@@ -285,17 +284,7 @@ function App() {
     if (!hasLoadedPreferences) return;
 
     chrome?.storage?.local.set({
-      preferences: JSON.stringify(preferences, (_k, v) => {
-        const isMap = v instanceof Map, isSet = v instanceof Set;
-
-        if (isMap || isSet) {
-          return {
-            dataType: isMap ? "Map" : "Set",
-            value: [...v]
-          };
-        }
-        return v;
-      })
+      preferences: JSON.stringify(preferences, jsonMapSetReplacer)
     })
       .catch(console.error);
   }, [preferences, hasLoadedPreferences]);
@@ -519,7 +508,7 @@ function App() {
       {
         discordTab &&
         <div className="item-wrapper">
-          <button {... !canToggleRun() && ({ disabled: true, "data-tooltip": cantRunReason })} onClick={toggleRun}>
+          <button {... !canToggleRun() && { disabled: true, "data-tooltip": cantRunReason }} onClick={toggleRun}>
             {BOT_STATES[botState].buttonSVG && SVGS[BOT_STATES[botState].buttonSVG as keyof typeof SVGS]}
             <span>{BOT_STATES[botState].buttonLabel}</span>
           </button>
