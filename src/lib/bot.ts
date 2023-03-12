@@ -1,15 +1,6 @@
 import { SVGS } from "./svgs";
 import { KAKERAS } from "./mudae";
 
-export const NOTIFICATIONS = {
-    "foundcharacter": "Found character",
-    "claimcharacter": "Claim character",
-    "soulmate": "New soulmate",
-    "cantclaim": "Can't claim character",
-    "wishsteal": "Wish steal",
-    "cantroll": "Can't roll and can still marry"
-} as const;
-
 export type PrefUseUsers = "logged" | "tokenlist";
 export type PrefRollType = "wx" | "wa" | "wg" | "hx" | "ha" | "hg";
 export type PrefNotificationType = "sound" | "popup" | "both";
@@ -47,7 +38,9 @@ interface BotStates {
         buttonLabel: string
         cantRunReason?: string
     }
-}
+};
+
+export type BotState = keyof typeof _BOT_STATES;
 
 const _BOT_STATES = {
     "unknown": {
@@ -71,9 +64,88 @@ const _BOT_STATES = {
     },
     "injection_error": {
         buttonSVG: "EXCLAMATION_DIAMOND",
-        buttonLabel: "Injection error"
+        buttonLabel: "Injection error",
+        cantRunReason: "<dynamic>"
     }
 } as const;
 
 export const BOT_STATES = _BOT_STATES as BotStates;
-export type BotState = keyof typeof _BOT_STATES;
+
+export const NOTIFICATIONS = {
+    "foundcharacter": "Found character",
+    "claimcharacter": "Claim character",
+    "soulmate": "New soulmate",
+    "cantclaim": "Can't claim character",
+    "wishsteal": "Wish steal",
+    "cantroll": "Can't roll and can still marry"
+} as const;
+
+export class BotUser {
+    info: Map<any, any>
+    token: string
+    id?: number
+    username?: string
+    avatar?: string
+    nick?: string
+
+    constructor(token: string, id?: number, username?: string, avatar?: string) {
+        this.token = token;
+        this.info = new Map();
+        
+        if (id && username && avatar){
+            this.id = id;
+            this.username = username;
+            this.avatar = avatar;
+        }
+    }
+
+    async init(): Promise<Error | void> {
+        return new Promise<Error | void>(async (resolve) => {
+            if (this.id && this.username && this.avatar){
+                const err = await this.fetchNick();
+    
+                resolve(err);
+                return;
+            }
+
+            fetch("https://discord.com/api/v9/users/@me", { "headers": { "authorization": this.token } })
+                .then(response => response.json())
+                .then(async (data) => {
+                    if (!Object.hasOwn(data, "id") || !Object.hasOwn(data, "username") || !Object.hasOwn(data, "avatar")){
+                        resolve(Error(`Couldn't retrieve info about the token [${this.token.slice(0, 7)}...${this.token.slice(-7)}]`))
+                        return;
+                    }
+
+                    this.id = data.id;
+                    this.username = data.username;
+                    this.avatar = data.avatar;
+
+                    const err = await this.fetchNick();
+
+                    resolve(err);
+                })
+                .catch(resolve);
+        });
+    }
+
+    fetchNick(): Promise<Error | void> {
+        return new Promise<Error | void>(resolve => {
+            const guildId = window.location.pathname.split("/")[2];
+
+            fetch(`https://discord.com/api/v9/users/${this.id}/profile?guild_id=${guildId}`, {
+                "headers": {
+                    "authorization": this.token
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const { guild_member: { nick } } = data;
+                    this.nick = nick;
+
+                    resolve();
+                })
+                .catch(resolve);
+        });
+    }
+}
+
