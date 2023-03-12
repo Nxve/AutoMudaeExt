@@ -46,7 +46,7 @@ function App() {
   /// Bot state
   const [discordTab, setDiscordTab] = useState<chrome.tabs.Tab>();
   const [botState, setBotState] = useState<BotState>("unknown");
-  const [cantRunReason, setCantRunReason] = useState("");
+  const [dynamicCantRunReason, setDynamicCantRunReason] = useState("");
 
   /// GUI
 
@@ -190,18 +190,18 @@ function App() {
     setPreferences({ ...preferences });
   };
 
+  const getCantRunReason = (): string => {
+    const reason = BOT_STATES[botState].cantRunReason;
+
+    if (reason === "<dynamic>") return dynamicCantRunReason;
+
+    return reason;
+  };
+
   /// BOT
 
   const canToggleRun = (): boolean => {
     if (botState !== "idle" && botState !== "running" && botState !== "waiting_injection") {
-      const reason = BOT_STATES[botState].cantRunReason;
-
-      if (!reason && cantRunReason) {
-        setCantRunReason("");
-      } else if (reason && reason !== "<dynamic>" && reason !== cantRunReason) {
-        setCantRunReason(reason);
-      }
-
       return false;
     }
 
@@ -211,8 +211,8 @@ function App() {
       ) {
         const reason = "You should use logged users or have a valid token list";
 
-        if (reason !== cantRunReason) {
-          setCantRunReason(reason);
+        if (reason !== dynamicCantRunReason) {
+          setDynamicCantRunReason(reason);
         }
 
         return false;
@@ -225,7 +225,7 @@ function App() {
   const toggleRun = () => {
     if (!discordTab || !discordTab.id) {
       setBotState("injection_error");
-      setCantRunReason("Couldn't find Discord tab, refresh the page and reopen the extension");
+      setDynamicCantRunReason("Couldn't find Discord tab, refresh the page and reopen the extension");
       return;
     }
 
@@ -236,7 +236,7 @@ function App() {
 
       chrome.tabs.sendMessage(discordTab.id, { id: MESSAGES.INJECTION, data: JSON.stringify(preferences, jsonMapSetReplacer) }, (err) => {
         if (err) {
-          setCantRunReason(err);
+          setDynamicCantRunReason(err);
           setBotState("injection_error");
           return;
         }
@@ -508,7 +508,16 @@ function App() {
       {
         discordTab &&
         <div className="item-wrapper">
-          <button {... !canToggleRun() && { disabled: true, "data-tooltip": cantRunReason }} onClick={toggleRun}>
+          {/* //# Replace these calls */}
+          <button
+            {... !canToggleRun() && {
+              disabled: true,
+              ...(getCantRunReason() && {
+                "data-tooltip": getCantRunReason()
+              })
+            }}
+            onClick={toggleRun}
+          >
             {BOT_STATES[botState].buttonSVG && SVGS[BOT_STATES[botState].buttonSVG as keyof typeof SVGS]}
             <span>{BOT_STATES[botState].buttonLabel}</span>
           </button>

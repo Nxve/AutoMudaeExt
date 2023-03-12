@@ -36,7 +36,7 @@ interface BotStates {
     [state: string]: {
         buttonSVG?: keyof typeof SVGS
         buttonLabel: string
-        cantRunReason?: string
+        cantRunReason: string
     }
 };
 
@@ -49,18 +49,22 @@ const _BOT_STATES = {
     },
     "waiting_injection": {
         buttonSVG: "ARROW_FILL",
-        buttonLabel: "Run"
+        buttonLabel: "Run",
+        cantRunReason: "<dynamic>"
     },
     "setup": {
         buttonLabel: "Setting up..",
+        cantRunReason: "Wait until it sets up"
     },
     "running": {
         buttonSVG: "PAUSE_FILL",
-        buttonLabel: "Pause"
+        buttonLabel: "Pause",
+        cantRunReason: "<dynamic>"
     },
     "idle": {
         buttonSVG: "ARROW_FILL",
-        buttonLabel: "Run"
+        buttonLabel: "Run",
+        cantRunReason: "<dynamic>"
     },
     "injection_error": {
         buttonSVG: "EXCLAMATION_DIAMOND",
