@@ -22,3 +22,9 @@ export const jsonMapSetReplacer = (_k: any, v: any) => {
     }
     return v;
 }
+
+export const getLastFromArray = (array: any[]) => array[array.length - 1];
+
+export const pickRandom = (arr: any[]) => arr[arr.length * Math.random() | 0];
+
+export const minifyToken = (token: string) => token.slice(0, 7) + "..." + token.slice(-7);
