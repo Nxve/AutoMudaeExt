@@ -1,5 +1,8 @@
+import type { EMOJI } from "./consts";
+import { INTERVAL_SEND_MESSAGE, MUDAE_USER_ID, SLASH_COMMANDS } from "./consts";
 import { SVGS } from "./svgs";
 import { KAKERAS } from "./mudae";
+import { minifyToken } from "./utils";
 
 export type PrefUseUsers = "logged" | "tokenlist";
 export type PrefRollType = "wx" | "wa" | "wg" | "hx" | "ha" | "hg";
@@ -32,6 +35,43 @@ export interface Preferences {
     }
 };
 
+export interface BotManager {
+    state: BotState
+    preferences: Preferences | null
+    $chat: HTMLElement | null
+    info: Map<typeof DISCORD_INFO[keyof typeof DISCORD_INFO], string>
+    users: Set<BotUser>
+    cdSendMessage: number
+    nonce: number
+    lastMessageTime: number
+    chatObserver: MutationObserver
+
+    hasNeededInfo(): boolean
+    isLastReset(): boolean
+    mudaeTimeToMs(time: string): number | undefined
+    getMarriageableUser(preferableUserNicknames?: string[]): BotUser | undefined
+    setup(): Promise<void>
+    toggle(): void
+    think(): void
+    handleHourlyReset(): void
+    handleNewChatAppend(nodes: NodeList): void
+    getUserWithCriteria(cb: (user: BotUser) => boolean): BotUser | undefined
+    observeToReact($message: HTMLElement, user?: BotUser): void
+
+    Message: {
+        getId: ($message: HTMLElement) => string
+        getAuthorId: ($message: HTMLElement) => string | undefined
+        isFromMudae: ($message: HTMLElement) => boolean
+        getUserWhoSent: ($message: HTMLElement) => BotUser | undefined
+    }
+
+    timers: {
+        _t: Map<string, {ref: number, isInterval: boolean}>
+        set(identifier: string, callback: Function, ms: number, isInterval?: boolean): void
+        clear(): void
+    }
+}
+
 interface BotStates {
     [state: string]: {
         buttonSVG?: keyof typeof SVGS
@@ -54,7 +94,7 @@ const _BOT_STATES = {
     },
     "setup": {
         buttonLabel: "Setting up..",
-        cantRunReason: "Wait until it sets up"
+        cantRunReason: ""
     },
     "running": {
         buttonSVG: "PAUSE_FILL",
@@ -84,19 +124,46 @@ export const NOTIFICATIONS = {
     "cantroll": "Can't roll and can still marry"
 } as const;
 
+export const DISCORD_INFO = {
+    CHANNEL_ID: 'channel_id',
+    GUILD_ID: 'guild_id',
+    SESSION_ID: 'session_id'
+} as const;
+
+export const USER_INFO = {
+    ROLLS_MAX: "rolls_max",
+    ROLLS_LEFT: "rolls_left",
+    POWER: "power",
+    CAN_RT: "can_rt",
+    CAN_MARRY: "can_marry",
+    CONSUMPTION: "kakera_consumption"
+} as const;
+
+const NEEDED_USER_INFO = [
+    USER_INFO.ROLLS_LEFT,
+    USER_INFO.ROLLS_MAX,
+    USER_INFO.POWER,
+    USER_INFO.CAN_RT,
+    USER_INFO.CAN_MARRY,
+    USER_INFO.CONSUMPTION
+] as const;
+
 export class BotUser {
-    info: Map<any, any>
+    manager: BotManager
+    info: Map<typeof USER_INFO[keyof typeof USER_INFO], unknown>
     token: string
-    id?: number
+    id?: string
     username?: string
     avatar?: string
     nick?: string
+    sendTUTimer?: any /// number, but typescript is complaining
 
-    constructor(token: string, id?: number, username?: string, avatar?: string) {
+    constructor(botManager: BotManager, token: string, id?: string, username?: string, avatar?: string) {
+        this.manager = botManager;
         this.token = token;
         this.info = new Map();
-        
-        if (id && username && avatar){
+
+        if (id && username && avatar) {
             this.id = id;
             this.username = username;
             this.avatar = avatar;
@@ -105,9 +172,9 @@ export class BotUser {
 
     async init(): Promise<Error | void> {
         return new Promise<Error | void>(async (resolve) => {
-            if (this.id && this.username && this.avatar){
+            if (this.id && this.username && this.avatar) {
                 const err = await this.fetchNick();
-    
+
                 resolve(err);
                 return;
             }
@@ -115,14 +182,19 @@ export class BotUser {
             fetch("https://discord.com/api/v9/users/@me", { "headers": { "authorization": this.token } })
                 .then(response => response.json())
                 .then(async (data) => {
-                    if (!Object.hasOwn(data, "id") || !Object.hasOwn(data, "username") || !Object.hasOwn(data, "avatar")){
-                        resolve(Error(`Couldn't retrieve info about the token [${this.token.slice(0, 7)}...${this.token.slice(-7)}]`))
-                        return;
+                    const minifiedToken = minifyToken(this.token);
+
+                    if (!Object.hasOwn(data, "id") || !Object.hasOwn(data, "username") || !Object.hasOwn(data, "avatar")) {
+                        throw Error(`Couldn't retrieve info about the token [${minifiedToken}]`);
                     }
 
                     this.id = data.id;
                     this.username = data.username;
                     this.avatar = data.avatar;
+
+                    if (this.avatar == null){
+                        throw Error(`Token [${minifiedToken}] must have a custom avatar`);
+                    }
 
                     const err = await this.fetchNick();
 
@@ -132,7 +204,7 @@ export class BotUser {
         });
     }
 
-    fetchNick(): Promise<Error | void> {
+    async fetchNick(): Promise<Error | void> {
         return new Promise<Error | void>(resolve => {
             const guildId = window.location.pathname.split("/")[2];
 
@@ -143,6 +215,10 @@ export class BotUser {
             })
                 .then(response => response.json())
                 .then(data => {
+                    if (!Object.hasOwn(data, "guild_member")){
+                        throw Error(`Token ${minifyToken(this.token)} must be a member of this guild`);
+                    }
+
                     const { guild_member: { nick } } = data;
                     this.nick = nick;
 
@@ -150,6 +226,108 @@ export class BotUser {
                 })
                 .catch(resolve);
         });
+    }
+
+    hasNeededInfo(): boolean {
+        return NEEDED_USER_INFO.every(info => this.info.has(info), this);
+    }
+
+    async sendChannelMessage(message: string): Promise<Error | void> {
+        return new Promise<Error | void>((resolve) => {
+            const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
+
+            if (!channelId) {
+                resolve(Error("Couldn't send channel message: unknown channel ID"));
+                return;
+            }
+
+            const now = performance.now();
+
+            if (now - this.manager.cdSendMessage < INTERVAL_SEND_MESSAGE){
+                resolve(Error("Couldn't send channel message: cooldown"));
+                return;
+            }
+
+            this.manager.cdSendMessage = now;
+
+            fetch(`https://discord.com/api/v9/channels/${channelId}/messages`, {
+                "method": "POST",
+                "headers": {
+                    "authorization": this.token,
+                    "content-type": "application/json"
+                },
+                "body": `{"content":"${message || '?'}","nonce":"${++this.manager.nonce}","tts":false}`
+            })
+                .then(() => resolve())
+                .catch(resolve);
+
+        })
+    }
+
+    async reactToMessage($message: HTMLElement, emoji: EMOJI | string): Promise<Error | void> {
+        return new Promise<Error | void>((resolve) => {
+            const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
+            const messageId = this.manager.Message.getId($message);
+    
+            if (!channelId) {
+                resolve(Error("Couldn't react to message: unknown channel ID"));
+                return;
+            }
+
+            if (!messageId) {
+                resolve(Error("Couldn't react to message: unknown message ID"));
+                return;
+            }
+    
+            fetch(`https://discord.com/api/v9/channels/${channelId}/messages/${messageId}/reactions/${emoji}/%40me`, {
+                "method": "PUT",
+                "headers": {
+                    "authorization": this.token,
+                }
+            })
+            .then(() => resolve())
+            .catch(resolve);
+        });        
+    }
+
+    async roll(): Promise<Error | void> {
+        return new Promise((resolve) => {
+            if (!this.manager.preferences){
+                resolve(Error("Couldn't roll: unknown preferences."));
+                return;
+            }
+
+            const guildId = this.manager.info.get(DISCORD_INFO.GUILD_ID);
+            const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
+            const sessionId = this.manager.info.get(DISCORD_INFO.SESSION_ID);
+    
+            if (!guildId || !channelId || !sessionId){
+                resolve(Error("Couldn't roll: unknown guild, channel or session ID."));
+                return;
+            }
+    
+            const rollType = this.manager.preferences.roll.type;
+            const command = SLASH_COMMANDS[rollType];
+    
+            fetch("https://discord.com/api/v9/interactions", {
+                "method": "POST",
+                "headers": {
+                    "authorization": this.token,
+                    "content-type": "multipart/form-data; boundary=----BDR",
+                },
+                "body": `------BDR\r\nContent-Disposition: form-data; name="payload_json"\r\n\r\n{"type":2,"application_id":"${MUDAE_USER_ID}","guild_id":"${guildId}","channel_id":"${channelId}","session_id":"${sessionId}","data":{"version":"${command.version}","id":"${command.id}","name":"${rollType}","type":1},"nonce":"${++this.manager.nonce}"}\r\n------BDR--\r\n`
+            })
+            .then(() => resolve())
+            .catch(resolve);
+        });
+    }
+
+    setTUTimer(ms: number) {
+        if (this.sendTUTimer) clearTimeout(this.sendTUTimer);
+
+        this.sendTUTimer = setTimeout((user: BotUser) => {
+            user.sendChannelMessage("$tu");
+        }, ms, this);
     }
 }
 
