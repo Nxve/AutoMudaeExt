@@ -1,7 +1,7 @@
 import type { BotState, Preferences, PrefLanguage, PrefNotification, PrefNotificationType, PrefReactionType, PrefRollType, PrefUseUsers } from "./lib/bot";
 import type { KAKERA } from "./lib/mudae";
 import React, { useEffect, useState } from "react";
-import { isTokenValid, jsonMapSetReplacer, jsonMapSetReviver } from "./lib/utils";
+import { isTokenValid, jsonMapSetReplacer, jsonMapSetReviver, minifyToken } from "./lib/utils";
 import { BOT_STATES, NOTIFICATIONS } from "./lib/bot";
 import { MESSAGES } from "./lib/messaging";
 import { SVGS } from "./lib/svgs";
@@ -397,7 +397,7 @@ function App() {
               {(preferences.useUsers === "tokenlist" ? [...preferences.kakera.perToken.keys()] : ["all"]).map((token, i) =>
                 <div className="item-wrapper inner-1 kakera-cfg" key={`kkcfg-${i}`}>
                   <span>
-                    {token === "all" ? "All users" : `${token.slice(0, 7)}...${token.slice(-7)}`}</span>
+                    {token === "all" ? "All users" : `${minifyToken(token)}`}</span>
                   <div className="flex-inline-wrapper">
                     {
                       configuringKakeraPerToken === token ?
