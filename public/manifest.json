@@ -15,7 +15,8 @@
   },
   "permissions": [
     "tabs",
-    "storage"
+    "storage",
+    "scripting"
   ],
   "host_permissions": [
     "https://discord.com/channels/*"
@@ -29,5 +30,9 @@
         "./static/js/content.js"
       ]
     }
-  ]
+  ],
+  "background": {
+    "service_worker": "./static/js/background.js",
+    "type": "module"
+  }
 }
