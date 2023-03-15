@@ -9,13 +9,11 @@ export type PrefRollType = "wx" | "wa" | "wg" | "hx" | "ha" | "hg";
 export type PrefNotificationType = "sound" | "popup" | "both";
 export type PrefNotification = keyof typeof NOTIFICATIONS;
 export type PrefLanguage = "en" | "fr" | "es" | "pt-br";
-export type PrefReactionType = "reaction" | "button";
 
 export interface Preferences {
     useUsers: PrefUseUsers;
     tokenList: Set<string>;
     languague: PrefLanguage;
-    reactionType: PrefReactionType;
     notifications: {
         type: PrefNotificationType
         enabled: Set<PrefNotification>
@@ -42,8 +40,11 @@ export interface BotManager {
     info: Map<typeof DISCORD_INFO[keyof typeof DISCORD_INFO], string>
     users: Set<BotUser>
     cdSendMessage: number
+    cdGatherInfo: number
+    cdRoll: number
     nonce: number
     lastMessageTime: number
+    lastResetHash: string
     chatObserver: MutationObserver
 
     hasNeededInfo(): boolean
@@ -110,6 +111,11 @@ const _BOT_STATES = {
         buttonSVG: "EXCLAMATION_DIAMOND",
         buttonLabel: "Injection error",
         cantRunReason: "<dynamic>"
+    },
+    "error": {
+        buttonSVG: "EXCLAMATION_DIAMOND",
+        buttonLabel: "Error",
+        cantRunReason: "<dynamic>"
     }
 } as const;
 
@@ -126,8 +132,7 @@ export const NOTIFICATIONS = {
 
 export const DISCORD_INFO = {
     CHANNEL_ID: 'channel_id',
-    GUILD_ID: 'guild_id',
-    SESSION_ID: 'session_id'
+    GUILD_ID: 'guild_id'
 } as const;
 
 export const USER_INFO = {
@@ -299,10 +304,9 @@ export class BotUser {
 
             const guildId = this.manager.info.get(DISCORD_INFO.GUILD_ID);
             const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
-            const sessionId = this.manager.info.get(DISCORD_INFO.SESSION_ID);
     
-            if (!guildId || !channelId || !sessionId){
-                resolve(Error("Couldn't roll: unknown guild, channel or session ID."));
+            if (!guildId || !channelId){
+                resolve(Error("Couldn't roll: unknown guild or channel ID."));
                 return;
             }
     
@@ -315,7 +319,7 @@ export class BotUser {
                     "authorization": this.token,
                     "content-type": "multipart/form-data; boundary=----BDR",
                 },
-                "body": `------BDR\r\nContent-Disposition: form-data; name="payload_json"\r\n\r\n{"type":2,"application_id":"${MUDAE_USER_ID}","guild_id":"${guildId}","channel_id":"${channelId}","session_id":"${sessionId}","data":{"version":"${command.version}","id":"${command.id}","name":"${rollType}","type":1},"nonce":"${++this.manager.nonce}"}\r\n------BDR--\r\n`
+                "body": `------BDR\r\nContent-Disposition: form-data; name="payload_json"\r\n\r\n{"type":2,"application_id":"${MUDAE_USER_ID}","guild_id":"${guildId}","channel_id":"${channelId}","session_id":"${++this.manager.nonce}","data":{"version":"${command.version}","id":"${command.id}","name":"${rollType}","type":1},"nonce":"${this.manager.nonce}"}\r\n------BDR--\r\n`
             })
             .then(() => resolve())
             .catch(resolve);

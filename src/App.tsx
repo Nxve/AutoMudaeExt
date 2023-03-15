@@ -1,5 +1,6 @@
-import type { BotState, Preferences, PrefLanguage, PrefNotification, PrefNotificationType, PrefReactionType, PrefRollType, PrefUseUsers } from "./lib/bot";
+import type { BotState, Preferences, PrefLanguage, PrefNotification, PrefNotificationType, PrefRollType, PrefUseUsers } from "./lib/bot";
 import type { KAKERA } from "./lib/mudae";
+import type { MessageID } from "./lib/messaging";
 import React, { useEffect, useState } from "react";
 import { isTokenValid, jsonMapSetReplacer, jsonMapSetReviver, minifyToken } from "./lib/utils";
 import { BOT_STATES, NOTIFICATIONS } from "./lib/bot";
@@ -23,7 +24,6 @@ function App() {
     useUsers: "logged",
     tokenList: new Set(),
     languague: "en",
-    reactionType: "reaction",
     notifications: {
       type: "sound",
       enabled: new Set()
@@ -222,27 +222,44 @@ function App() {
     return true;
   };
 
-  const toggleRun = () => {
+  const sendMessage = (messageId: MessageID, data: any, cb: (response?: any) => void) => {
     if (!discordTab || !discordTab.id) {
-      setBotState("injection_error");
-      setDynamicCantRunReason("Couldn't find Discord tab, refresh the page and reopen the extension");
+      setBotState("error");
+      setDynamicCantRunReason("Couldn't find Discord tab, refresh the page and try again");
       return;
     }
+
+    chrome.tabs.sendMessage(discordTab.id, { id: messageId, data }, cb);
+  }
+
+  const toggleRun = () => {
+    if (!discordTab) return;
 
     if (botState === "waiting_injection") {
       discordTab.autoDiscardable = false;
 
       setBotState("setup");
 
-      chrome.tabs.sendMessage(discordTab.id, { id: MESSAGES.INJECTION, data: JSON.stringify(preferences, jsonMapSetReplacer) }, (err) => {
+      sendMessage(MESSAGES.INJECTION, JSON.stringify(preferences, jsonMapSetReplacer), (err?: Error) => {
         if (err) {
-          setDynamicCantRunReason(err);
+          setDynamicCantRunReason(err.message);
           setBotState("injection_error");
           return;
         }
 
         setBotState("running");
       });
+
+    } else if (botState === "running" || botState === "idle") {
+      sendMessage(MESSAGES.TOGGLE, null, (response?: Error | BotState) => {
+        if (response && !(response instanceof Error)) {
+          setBotState(response);
+          return;
+        }
+
+        setDynamicCantRunReason(response ? response.message : "Invalid response from toggle message.");
+        setBotState("error");
+      })
     }
   };
 
@@ -494,13 +511,6 @@ function App() {
               <option value="fr">Français</option>
               <option value="es">Español</option>
               <option value="pt-br">Português</option>
-            </select>
-          </div>
-          <div className="item-wrapper inner-0">
-            <span>Reaction Type</span>
-            <select value={preferences.reactionType} onChange={(e) => setPreferences({ ...preferences, reactionType: e.target.value as PrefReactionType })}>
-              <option value="reaction">Reaction</option>
-              <option value="button">Button</option>
             </select>
           </div>
         </>

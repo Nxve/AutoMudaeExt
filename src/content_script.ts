@@ -4,7 +4,7 @@ import type { Message } from "./lib/messaging";
 import type { KAKERA } from "./lib/mudae";
 import { DISCORD_INFO } from "./lib/bot";
 import { BotUser, USER_INFO } from "./lib/bot";
-import { EMOJIS, INTERVAL_THINK, MUDAE_USER_ID } from "./lib/consts";
+import { EMOJIS, INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID } from "./lib/consts";
 import { MESSAGES } from "./lib/messaging";
 import { KAKERAS } from "./lib/mudae";
 import { getLastFromArray, jsonMapSetReviver, pickRandom } from "./lib/utils";
@@ -16,7 +16,10 @@ const bot: BotManager = {
     info: new Map(),
     users: new Set(),
     cdSendMessage: 0,
+    cdGatherInfo: 0,
+    cdRoll: 0,
     lastMessageTime: 0,
+    lastResetHash: "",
     nonce: Math.floor(Math.random() * 1000000),
     chatObserver: new MutationObserver(ms => ms.forEach(m => { if (m.addedNodes.length) { bot.handleNewChatAppend(m.addedNodes) } })),
 
@@ -129,9 +132,9 @@ const bot: BotManager = {
         return marriageableUser;
     },
 
-    getUserWithCriteria(cb){
+    getUserWithCriteria(cb) {
         for (const user of this.users) {
-            if (cb(user)) return user;            
+            if (cb(user)) return user;
         }
     },
 
@@ -240,6 +243,46 @@ const bot: BotManager = {
     },
 
     think() {
+        if (!bot.preferences) return;
+
+        const now = performance.now();
+        const dateNow = new Date(), h = dateNow.getHours(), m = dateNow.getMinutes();
+
+        if (!bot.hasNeededInfo()) {
+            if (now - bot.cdGatherInfo < 1000) return;
+
+            for (const user of bot.users) {
+                if (!user.hasNeededInfo()) {
+                    user.sendChannelMessage("$tu");
+                    break;
+                }
+            }
+
+            bot.cdGatherInfo = now;
+            return;
+        }
+
+        const userWithRolls = bot.getUserWithCriteria(user => (user.info.get(USER_INFO.ROLLS_LEFT) as number) > 0);
+        const isRollEnabled = bot.preferences.roll.enabled;
+
+        if (isRollEnabled) {
+            if (userWithRolls && now - bot.lastMessageTime > INTERVAL_ROLL && now - bot.cdRoll > (INTERVAL_ROLL * .5)) {
+                userWithRolls.roll();
+                bot.cdRoll = now;
+            }
+        }
+
+        if ((!isRollEnabled || (isRollEnabled && !userWithRolls)) && m > 38 && bot.isLastReset() && bot.getMarriageableUser()) {
+            const currentResetHash = `${dateNow.toDateString()} ${h}`;
+
+            if (bot.lastResetHash !== currentResetHash) {
+                bot.lastResetHash = currentResetHash;
+
+                //# if isRollEnabled auto-use $us or $rolls
+                //# notify about last reset can still marry
+            }
+
+        }
 
     },
 
@@ -376,7 +419,7 @@ const bot: BotManager = {
                             const mentionedNick = ($mentions[i] as HTMLElement).innerText.slice(1);
 
                             for (const botUser of bot.users) {
-                                if (botUser.nick === mentionedNick){
+                                if (botUser.nick === mentionedNick) {
                                     isIncludingMe = true;
                                     break;
                                 }
@@ -397,7 +440,7 @@ const bot: BotManager = {
 
                 if (noMoreRollsMatch) {
                     for (const botUser of bot.users) {
-                        if (botUser.username === noMoreRollsMatch[1]){
+                        if (botUser.username === noMoreRollsMatch[1]) {
                             setTimeout(() => botUser.sendChannelMessage("$tu"), 250);
                             return;
                         }
@@ -415,7 +458,7 @@ const bot: BotManager = {
                         // const kakeraQuantity = kakeraClaimMatch[2];
 
                         const user = bot.getUserWithCriteria((user) => user.username === messageUsername);
-                        
+
                         if (user) {
                             const kakeraType = ($kakeraClaimStrong.previousElementSibling?.firstElementChild as HTMLImageElement | null)?.alt.replace(/:/g, '');
 
@@ -478,7 +521,7 @@ const bot: BotManager = {
                     const mentionedNicknames: string[] = [...$msg.querySelectorAll("span.mention")].map($mention => ($mention as HTMLElement).innerText.slice(1));
 
                     for (const mentionedNick of mentionedNicknames) {
-                        if (bot.getUserWithCriteria(user => user.nick === mentionedNick)){
+                        if (bot.getUserWithCriteria(user => user.nick === mentionedNick)) {
                             $interestingCharacterMsg = $msg;
                             isWished = true;
                             break;
@@ -562,14 +605,14 @@ const bot: BotManager = {
             const kakeraCode = $reactionImg.alt;
 
             for (const botUser of bot.users) {
-                for (const _kakera in bot.preferences!.kakera.perToken.get(botUser.token)){
+                for (const _kakera in bot.preferences!.kakera.perToken.get(botUser.token)) {
                     const kakera = _kakera as KAKERA;
                     const kakeraInternalName = KAKERAS[kakera].internalName;
 
-                    if (kakeraInternalName === kakeraCode){
+                    if (kakeraInternalName === kakeraCode) {
                         const powerCost = kakera === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
 
-                        if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost){
+                        if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
                             botUser.reactToMessage($message, KAKERAS[kakera].emoji);
                             return;
                         }
@@ -581,7 +624,7 @@ const bot: BotManager = {
 };
 
 const handleExtensionMessage = (message: Message, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
-    if (!message.id) return;
+    if (!Object.hasOwn(message, "id")) return;
 
     switch (message.id) {
         case MESSAGES.GET_STATE:
@@ -598,12 +641,20 @@ const handleExtensionMessage = (message: Message, _sender: chrome.runtime.Messag
                 })
                 .catch((err: Error) => {
                     bot.state = "injection_error";
-                    sendResponse(err.message);
+                    sendResponse(err);
                 });
 
             /// Must return true here to keep it open waiting for async response
             /// [ref: https://developer.chrome.com/docs/extensions/mv3/messaging/#simple]
             return true;
+        case MESSAGES.TOGGLE:
+            try {
+                bot.toggle();
+                sendResponse(bot.state);
+            } catch (error: any) {
+                sendResponse(error instanceof Error ? error.message : String(error));
+            }
+            break;
         default:
             break;
     }
