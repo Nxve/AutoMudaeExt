@@ -1,9 +1,12 @@
 export const MESSAGES = {
     GET_STATE: "get_state",
-    INJECTION: "injection"
+    INJECTION: "injection",
+    TOGGLE: "toggle"
 } as const;
 
+export type MessageID = typeof MESSAGES[keyof typeof MESSAGES];
+
 export interface Message {
-    id: typeof MESSAGES[keyof typeof MESSAGES]
+    id: MessageID
     data?: any
 };
