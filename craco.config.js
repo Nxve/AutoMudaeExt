@@ -6,6 +6,7 @@ module.exports = {
                 entry: {
                     main: [env === 'development' && require.resolve('react-dev-utils/webpackHotDevClient'), paths.appIndexJs].filter(Boolean),
                     content: './src/content_script.ts',
+                    background: './src/background.ts'
                 },
                 output: {
                     ...webpackConfig.output,
