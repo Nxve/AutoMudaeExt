@@ -6,9 +6,7 @@ It is still in early development, thus unavailable in webstore and not really fu
 You can expect it to be available for use after the completion of the below roadmap, _not including after plans_:
 
 #### Roadmap to get it working:
-- Kakera:
-    - Check for "all" preferences too
-    - Adapt to new button claiming instead of old reactions
+- Try claiming character/kakera even before Mudae appending a button
 - Option to clear preferences
 - Summary about usage
 - Logs:
@@ -30,17 +28,19 @@ You can expect it to be available for use after the completion of the below road
         - Slash commands only
         - $tu exposing every needed info
 
-#### After plans:
+#### Secondary plans:
 - Styling:
     - Change checkboxes to Discord's toggle buttons
     - Change dropdowns to Discord's style
+- Better logic/performance:
+    - `observeToReact` should use MutationObserver
+    - Handle hourly reset
 - List of characters to claim even if not wished
     - Maybe whole series too
 - Option to use $dk, $daily
 - Option to use $us, $rolls and $rt when needed
 - Wished characters maintenance: remove claimed wishes, wish from user configured list of interesting characters
 - Transfer characters between users
-- Better logic to handle hourly reset
 - Portability to other browsers
 
 ###### Initial boilerplate was created following instructions from [this LogRocket post](https://blog.logrocket.com/creating-chrome-extension-react-typescript/)
