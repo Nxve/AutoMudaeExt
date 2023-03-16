@@ -578,13 +578,12 @@ const bot: BotManager = {
     },
 
     observeToReact($message, userToReact?) {
-        let runs = 0;
+        let checkCount = 0;
 
         const observer: any = setInterval(() => {
-            if (!$message || runs++ >= 30) return clearInterval(observer);
+            if (!$message || checkCount++ >= 30) return clearInterval(observer);
 
-            /// Searches for reactions. If there's a userToReact, it's presumably to claim characters, otherwise it's to claim kakeras, hence the conditional kakera flag
-            const $reactionImg = $message.querySelector(`div[class^='reactionInner']${userToReact ? "" : "[aria-label^='kakera']"}[aria-label*='1 rea'] img`) as HTMLImageElement | null;
+            const $reactionImg: HTMLImageElement | null = $message.querySelector("button img");
 
             if (!$reactionImg) return;
 
@@ -593,29 +592,40 @@ const bot: BotManager = {
             if (userToReact) {
                 const emoji: EMOJI | undefined = EMOJIS[$reactionImg.alt as keyof typeof EMOJIS];
 
-                if (!emoji) {
-                    //# Notify about unknown emoji (Care: could be anyone reacting before Mudae itself)
-                    return;
-                }
-
                 userToReact.reactToMessage($message, emoji);
                 return;
             }
 
+            if (!bot.preferences || !bot.preferences.kakera.perToken.has("all")){
+                return; //# Raise error
+            }
+
             const kakeraCode = $reactionImg.alt;
+            let kakeraToGet: KAKERA | undefined;
+
+            for (const kakera of (bot.preferences.kakera.perToken.get("all") as Set<KAKERA>)) {
+                if (KAKERAS[kakera].internalName === kakeraCode){
+                    kakeraToGet = kakera;
+                    break;
+                }
+            }
 
             for (const botUser of bot.users) {
-                for (const _kakera in bot.preferences!.kakera.perToken.get(botUser.token)) {
-                    const kakera = _kakera as KAKERA;
-                    const kakeraInternalName = KAKERAS[kakera].internalName;
-
-                    if (kakeraInternalName === kakeraCode) {
-                        const powerCost = kakera === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
-
-                        if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
-                            botUser.reactToMessage($message, KAKERAS[kakera].emoji);
-                            return;
+                if (!kakeraToGet){
+                    for (const kakera of (bot.preferences.kakera.perToken.get(botUser.token) as Set<KAKERA>)) {
+                        if (KAKERAS[kakera].internalName === kakeraCode){
+                            kakeraToGet = kakera;
+                            break;
                         }
+                    }
+                }
+
+                if (kakeraToGet){
+                    const powerCost = kakeraToGet === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
+
+                    if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
+                        botUser.reactToMessage($message);
+                        return;
                     }
                 }
             }
