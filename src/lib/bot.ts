@@ -1,8 +1,8 @@
-import type { EMOJI } from "./consts";
+import { EMOJIS } from "./consts";
 import { INTERVAL_SEND_MESSAGE, MUDAE_USER_ID, SLASH_COMMANDS } from "./consts";
 import { SVGS } from "./svgs";
 import { KAKERAS } from "./mudae";
-import { minifyToken } from "./utils";
+import { minifyToken, pickRandom } from "./utils";
 
 export type PrefUseUsers = "logged" | "tokenlist";
 export type PrefRollType = "wx" | "wa" | "wg" | "hx" | "ha" | "hg";
@@ -269,7 +269,7 @@ export class BotUser {
         })
     }
 
-    async reactToMessage($message: HTMLElement, emoji: EMOJI | string): Promise<Error | void> {
+    async reactToMessage($message: HTMLElement, emoji?: string): Promise<Error | void> {
         return new Promise<Error | void>((resolve) => {
             const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
             const messageId = this.manager.Message.getId($message);
@@ -283,6 +283,8 @@ export class BotUser {
                 resolve(Error("Couldn't react to message: unknown message ID"));
                 return;
             }
+
+            emoji = emoji || pickRandom([...Object.values(EMOJIS)]);
     
             fetch(`https://discord.com/api/v9/channels/${channelId}/messages/${messageId}/reactions/${emoji}/%40me`, {
                 "method": "PUT",
