@@ -1,7 +1,5 @@
-#App:not(.theme-other) {
-
+:root {
     /* Defaults */
-
     --red-100: hsl(var(--red-100-hsl)/1);
     --red-100-hsl: 350 calc(var(--saturation-factor, 1)*75%) 98.4%;
     --red-130: hsl(var(--red-130-hsl)/1);

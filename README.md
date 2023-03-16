@@ -33,6 +33,7 @@ You can expect it to be available for use after the completion of the below road
 - Styling:
     - Change checkboxes to Discord's toggle buttons
     - Change dropdowns to Discord's style
+    - Add a fade out/in to scrollbar thumb when not active
 - Better logic/performance:
     - `observeToReact` should use MutationObserver
     - Handle hourly reset
