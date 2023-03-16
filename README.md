@@ -7,7 +7,8 @@ You can expect it to be available for use after the completion of the below road
 
 #### Roadmap to get it working:
 - Try claiming character/kakera even before Mudae appending a button
-- Option to clear preferences
+- Hotreloading preferences in running bots
+- When clearing preferences, it should stop the bot in every Discord page
 - Summary about usage
 - Logs:
     - Two categories:
