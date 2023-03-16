@@ -9,10 +9,34 @@ import { SVGS } from "./lib/svgs";
 import { KAKERAS } from "./lib/mudae";
 import "./styles/App.css";
 
+const defaultPreferences = (): Preferences => ({
+  useUsers: "logged",
+  tokenList: new Set(),
+  languague: "en",
+  notifications: {
+    type: "sound",
+    enabled: new Set()
+  },
+  roll: {
+    enabled: true,
+    type: "wx"
+  },
+  claim: {
+    delay: 0,
+    delayRandom: false
+  },
+  kakera: {
+    delay: 0,
+    delayRandom: false,
+    perToken: new Map([["all", new Set()]])
+  }
+});
+
 function App() {
   /// Popup state
   const [isConfiguringBOT, setIsConfiguringBOT] = useState(false);
   const [isConfiguringGuild, setIsConfiguringGuild] = useState(false);
+  const [isConfiguringExtra, setIsConfiguringExtra] = useState(false);
   const [isConfiguringTokenlist, setIsConfiguringTokenlist] = useState(false);
   const [isConfiguringClaim, setIsConfiguringClaim] = useState(false);
   const [isConfiguringKakera, setIsConfiguringKakera] = useState(false);
@@ -20,28 +44,7 @@ function App() {
   const [configuringKakeraPerToken, setConfiguringKakeraPerToken] = useState("");
   const [tokenList, setTokenList] = useState<string[]>([]);
   const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
-  const [preferences, setPreferences] = useState<Preferences>({
-    useUsers: "logged",
-    tokenList: new Set(),
-    languague: "en",
-    notifications: {
-      type: "sound",
-      enabled: new Set()
-    },
-    roll: {
-      enabled: true,
-      type: "wx"
-    },
-    claim: {
-      delay: 0,
-      delayRandom: false
-    },
-    kakera: {
-      delay: 0,
-      delayRandom: false,
-      perToken: new Map([["all", new Set()]])
-    }
-  });
+  const [preferences, setPreferences] = useState<Preferences>(defaultPreferences());
 
   /// Bot state
   const [discordTab, setDiscordTab] = useState<chrome.tabs.Tab>();
@@ -88,9 +91,18 @@ function App() {
     setPreferences({ ...preferences });
   };
 
-  const toggleMenuCategory = (category: string) => {
-    const setters = new Set([setIsConfiguringBOT, setIsConfiguringGuild]);
+  const toggleMenuCategory = (category?: string) => {
+    const setters = new Set([setIsConfiguringBOT, setIsConfiguringGuild, setIsConfiguringExtra]);
     let setter;
+    
+    /// Fold all
+    if (!category){
+      for (const setOtherCategory of setters) {
+        setOtherCategory(false);
+      }
+
+      return;
+    }
 
     switch (category) {
       case "bot":
@@ -98,6 +110,9 @@ function App() {
         break;
       case "guild":
         setter = setIsConfiguringGuild;
+        break;
+      case "extra":
+        setter = setIsConfiguringExtra;
         break;
       default:
         break;
@@ -196,6 +211,12 @@ function App() {
     if (reason === "<dynamic>") return dynamicCantRunReason;
 
     return reason;
+  };
+
+  const reset = () => {
+    toggleMenuCategory();
+    setPreferences(defaultPreferences());
+    setTokenList([]);
   };
 
   /// BOT
@@ -514,6 +535,19 @@ function App() {
             </select>
           </div>
         </>
+      }
+      <div className="item-wrapper">
+        <button {...(isConfiguringExtra && { className: "toggle" })} onClick={() => toggleMenuCategory("extra")}>
+          {SVGS.GEAR}
+          <span>Extra</span>
+          {SVGS.ARROW}
+        </button>
+      </div>
+      {
+        isConfiguringExtra &&
+        <div className="item-wrapper inner-0">
+          <button onClick={reset}>Reset all config</button>
+        </div>
       }
       {
         discordTab &&
