@@ -1,6 +1,6 @@
 import type { BotState, Preferences, PrefLanguage, PrefNotification, PrefNotificationType, PrefRollType, PrefUseUsers } from "./lib/bot";
 import type { KAKERA } from "./lib/mudae";
-import type { MessageID } from "./lib/messaging";
+import type { MessageID, Message } from "./lib/messaging";
 import React, { useEffect, useState } from "react";
 import { isTokenValid, jsonMapSetReplacer, jsonMapSetReviver, minifyToken } from "./lib/utils";
 import { BOT_STATES, NOTIFICATIONS } from "./lib/bot";
@@ -94,9 +94,9 @@ function App() {
   const toggleMenuCategory = (category?: string) => {
     const setters = new Set([setIsConfiguringBOT, setIsConfiguringGuild, setIsConfiguringExtra]);
     let setter;
-    
+
     /// Fold all
-    if (!category){
+    if (!category) {
       for (const setOtherCategory of setters) {
         setOtherCategory(false);
       }
@@ -243,44 +243,63 @@ function App() {
     return true;
   };
 
-  const sendMessage = (messageId: MessageID, data: any, cb: (response?: any) => void) => {
-    if (!discordTab || !discordTab.id) {
-      setBotState("error");
-      setDynamicCantRunReason("Couldn't find Discord tab, refresh the page and try again");
-      return;
+  const sendMessage = (messageId: MessageID, data: any, cb: (response?: any) => void, target?: chrome.tabs.Tab | number): boolean => {
+    if (!target) {
+      chrome?.tabs?.query({ url: "https://discord.com/channels/*", currentWindow: true, status: "complete" })
+        .then((tabs) => {
+          tabs.forEach(tab => {
+            if (!tab.id) return;
+            chrome.tabs.sendMessage<Message>(tab.id, { id: messageId, data }, cb);
+          });
+        });
+      return true;
     }
 
-    chrome.tabs.sendMessage(discordTab.id, { id: messageId, data }, cb);
+    if (typeof target !== "number") target = target.id;
+
+    if (!target) return false;
+
+    chrome.tabs.sendMessage<Message>(target, { id: messageId, data }, cb);
+
+    return true;
   }
 
   const toggleRun = () => {
     if (!discordTab) return;
 
-    if (botState === "waiting_injection") {
-      discordTab.autoDiscardable = false;
+    try {
+      if (botState === "waiting_injection") {
+        discordTab.autoDiscardable = false;
 
-      setBotState("setup");
+        setBotState("setup");
 
-      sendMessage(MESSAGES.INJECTION, JSON.stringify(preferences, jsonMapSetReplacer), (err?: Error) => {
-        if (err) {
-          setDynamicCantRunReason(err.message);
-          setBotState("injection_error");
-          return;
-        }
+        const sent = sendMessage(MESSAGES.INJECTION, JSON.stringify(preferences, jsonMapSetReplacer), (err?: Error) => {
+          if (err) {
+            setDynamicCantRunReason(err.message);
+            setBotState("injection_error");
+            return;
+          }
 
-        setBotState("running");
-      });
+          setBotState("running");
+        }, discordTab);
 
-    } else if (botState === "running" || botState === "idle") {
-      sendMessage(MESSAGES.TOGGLE, null, (response?: Error | BotState) => {
-        if (response && !(response instanceof Error)) {
-          setBotState(response);
-          return;
-        }
+        if (!sent) throw Error("Couldn't find Discord ID. Refresh the page");
+      } else if (botState === "running" || botState === "idle") {
+        const sent = sendMessage(MESSAGES.TOGGLE, null, (response?: Error | BotState) => {
+          if (response && !(response instanceof Error)) {
+            setBotState(response);
+            return;
+          }
 
-        setDynamicCantRunReason(response ? response.message : "Invalid response from toggle message.");
-        setBotState("error");
-      })
+          setDynamicCantRunReason(response ? response.message : "Invalid response from toggle message.");
+          setBotState("error");
+        }, discordTab);
+
+        if (!sent) throw Error("Couldn't find Discord ID. Refresh the page");
+      }
+    } catch (error) {
+      setDynamicCantRunReason(error instanceof Error ? error.message : String(error));
+      setBotState("error");
     }
   };
 
@@ -317,9 +336,14 @@ function App() {
       .catch(console.error)
   }, []);
 
-  /// Save preferences to Chrome's storage whenever it changes
   useEffect(() => {
     if (!hasLoadedPreferences) return;
+
+    sendMessage(
+      MESSAGES.SYNC_PREFERENCES,
+      JSON.stringify(preferences, jsonMapSetReplacer),
+      (err?: Error) => console.error(err)
+    );
 
     chrome?.storage?.local.set({
       preferences: JSON.stringify(preferences, jsonMapSetReplacer)

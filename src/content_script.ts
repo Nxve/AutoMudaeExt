@@ -1,4 +1,4 @@
-import type { BotManager } from "./lib/bot";
+import type { BotManager, Preferences } from "./lib/bot";
 import type { EMOJI } from "./lib/consts";
 import type { Message } from "./lib/messaging";
 import type { KAKERA } from "./lib/mudae";
@@ -596,7 +596,7 @@ const bot: BotManager = {
                 return;
             }
 
-            if (!bot.preferences || !bot.preferences.kakera.perToken.has("all")){
+            if (!bot.preferences || !bot.preferences.kakera.perToken.has("all")) {
                 return; //# Raise error
             }
 
@@ -604,23 +604,23 @@ const bot: BotManager = {
             let kakeraToGet: KAKERA | undefined;
 
             for (const kakera of (bot.preferences.kakera.perToken.get("all") as Set<KAKERA>)) {
-                if (KAKERAS[kakera].internalName === kakeraCode){
+                if (KAKERAS[kakera].internalName === kakeraCode) {
                     kakeraToGet = kakera;
                     break;
                 }
             }
 
             for (const botUser of bot.users) {
-                if (!kakeraToGet){
+                if (!kakeraToGet) {
                     for (const kakera of (bot.preferences.kakera.perToken.get(botUser.token) as Set<KAKERA>)) {
-                        if (KAKERAS[kakera].internalName === kakeraCode){
+                        if (KAKERAS[kakera].internalName === kakeraCode) {
                             kakeraToGet = kakera;
                             break;
                         }
                     }
                 }
 
-                if (kakeraToGet){
+                if (kakeraToGet) {
                     const powerCost = kakeraToGet === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
 
                     if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
@@ -630,6 +630,28 @@ const bot: BotManager = {
                 }
             }
         }, 100);
+    }
+};
+
+let hangingPreferencesToSync: Preferences | null = null;
+
+const syncPreferences = (newPreferences: Preferences) => {
+    if (!bot.preferences) throw Error("No preferences was found during sync.");
+
+    if (bot.state === "idle" || bot.state === "running") {
+        if (newPreferences.useUsers !== bot.preferences.useUsers || (bot.preferences.useUsers === "tokenlist" && [...newPreferences.tokenList].toString() !== [...bot.preferences.tokenList].toString())) {
+            //# Notify about it
+            window.location.reload();
+            //# Resetup instead
+            //# Then there will be a loop of resync while setting up, hanging preferences again & again
+            //# Should wait for the use to stop altering tokenlist, otherwise it will keep setting up for each altered token
+            return;
+        }
+
+        bot.preferences = newPreferences;
+        hangingPreferencesToSync = null;
+    } else if (bot.state === "setup") {
+        hangingPreferencesToSync = newPreferences;
     }
 };
 
@@ -646,8 +668,13 @@ const handleExtensionMessage = (message: Message, _sender: chrome.runtime.Messag
             bot.setup()
                 .then(() => {
                     bot.state = "idle";
-                    sendResponse();
+
+                    if (hangingPreferencesToSync) {
+                        syncPreferences(hangingPreferencesToSync);
+                    }
+
                     bot.toggle();
+                    sendResponse();
                 })
                 .catch((err: Error) => {
                     bot.state = "injection_error";
@@ -661,6 +688,15 @@ const handleExtensionMessage = (message: Message, _sender: chrome.runtime.Messag
             try {
                 bot.toggle();
                 sendResponse(bot.state);
+            } catch (error: any) {
+                sendResponse(error instanceof Error ? error.message : String(error));
+            }
+            break;
+        case MESSAGES.SYNC_PREFERENCES:
+            try {
+                const newPreferences: Preferences = JSON.parse(message.data, jsonMapSetReviver);
+
+                syncPreferences(newPreferences);
             } catch (error: any) {
                 sendResponse(error instanceof Error ? error.message : String(error));
             }
