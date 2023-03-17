@@ -57,7 +57,6 @@ export interface BotManager {
     handleHourlyReset(): void
     handleNewChatAppend(nodes: NodeList): void
     getUserWithCriteria(cb: (user: BotUser) => boolean): BotUser | undefined
-    observeToReact($message: HTMLElement, user?: BotUser): void
 
     Message: {
         getId: ($message: HTMLElement) => string
@@ -67,7 +66,7 @@ export interface BotManager {
     }
 
     timers: {
-        _t: Map<string, {ref: number, isInterval: boolean}>
+        _t: Map<string, { ref: number, isInterval: boolean }>
         set(identifier: string, callback: Function, ms: number, isInterval?: boolean): void
         clear(): void
     }
@@ -197,7 +196,7 @@ export class BotUser {
                     this.username = data.username;
                     this.avatar = data.avatar;
 
-                    if (this.avatar == null){
+                    if (this.avatar == null) {
                         throw Error(`Token [${minifiedToken}] must have a custom avatar`);
                     }
 
@@ -220,7 +219,7 @@ export class BotUser {
             })
                 .then(response => response.json())
                 .then(data => {
-                    if (!Object.hasOwn(data, "guild_member")){
+                    if (!Object.hasOwn(data, "guild_member")) {
                         throw Error(`Token ${minifyToken(this.token)} must be a member of this guild`);
                     }
 
@@ -248,7 +247,7 @@ export class BotUser {
 
             const now = performance.now();
 
-            if (now - this.manager.cdSendMessage < INTERVAL_SEND_MESSAGE){
+            if (now - this.manager.cdSendMessage < INTERVAL_SEND_MESSAGE) {
                 resolve(Error("Couldn't send channel message: cooldown"));
                 return;
             }
@@ -273,7 +272,7 @@ export class BotUser {
         return new Promise<Error | void>((resolve) => {
             const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
             const messageId = this.manager.Message.getId($message);
-    
+
             if (!channelId) {
                 resolve(Error("Couldn't react to message: unknown channel ID"));
                 return;
@@ -285,36 +284,36 @@ export class BotUser {
             }
 
             emoji = emoji || pickRandom([...Object.values(EMOJIS)]);
-    
+
             fetch(`https://discord.com/api/v9/channels/${channelId}/messages/${messageId}/reactions/${emoji}/%40me`, {
                 "method": "PUT",
                 "headers": {
                     "authorization": this.token,
                 }
             })
-            .then(() => resolve())
-            .catch(resolve);
-        });        
+                .then(() => resolve())
+                .catch(resolve);
+        });
     }
 
     async roll(): Promise<Error | void> {
         return new Promise((resolve) => {
-            if (!this.manager.preferences){
+            if (!this.manager.preferences) {
                 resolve(Error("Couldn't roll: unknown preferences."));
                 return;
             }
 
             const guildId = this.manager.info.get(DISCORD_INFO.GUILD_ID);
             const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
-    
-            if (!guildId || !channelId){
+
+            if (!guildId || !channelId) {
                 resolve(Error("Couldn't roll: unknown guild or channel ID."));
                 return;
             }
-    
+
             const rollType = this.manager.preferences.roll.type;
             const command = SLASH_COMMANDS[rollType];
-    
+
             fetch("https://discord.com/api/v9/interactions", {
                 "method": "POST",
                 "headers": {
@@ -323,8 +322,8 @@ export class BotUser {
                 },
                 "body": `------BDR\r\nContent-Disposition: form-data; name="payload_json"\r\n\r\n{"type":2,"application_id":"${MUDAE_USER_ID}","guild_id":"${guildId}","channel_id":"${channelId}","session_id":"${++this.manager.nonce}","data":{"version":"${command.version}","id":"${command.id}","name":"${rollType}","type":1},"nonce":"${this.manager.nonce}"}\r\n------BDR--\r\n`
             })
-            .then(() => resolve())
-            .catch(resolve);
+                .then(() => resolve())
+                .catch(resolve);
         });
     }
 

@@ -543,21 +543,15 @@ const bot: BotManager = {
                         if (marriageableUser) {
                             //# Verify if marriageableUser can still marry after all delay calculations (In case of multiple marriageable characters at the same time)
 
-                            if (!isWished) {
-                                //# Remove this hardcoded delay
-                                setTimeout(() => marriageableUser.reactToMessage($msg, pickRandom(Object.values(EMOJIS))), 8500);
-                                return;
-                            }
-
                             const isProtected = !!$msg.querySelector("img[alt=':wishprotect:']");
 
                             if (!isProtected || (isProtected && marriageableUser.id === replyUserId)) {
-                                bot.observeToReact($msg, marriageableUser);
+                                setTimeout(() => marriageableUser.reactToMessage($msg), 200);
                                 return;
                             }
 
                             /// Delay to claim protected wishes
-                            setTimeout(() => bot.observeToReact($msg, marriageableUser), 2905);
+                            setTimeout(() => marriageableUser.reactToMessage($msg), 2905);
                             return;
                         }
 
@@ -569,68 +563,43 @@ const bot: BotManager = {
 
                 /// Owned characters
                 if ($footer.innerText.includes("Pertence")) {
-                    bot.observeToReact($msg);
-                }
+                    const $kakeraImg: HTMLImageElement | null = $msg.querySelector("button img");
 
-                return;
-            }
-        });
-    },
+                    if ($kakeraImg) {
+                        const kakeraCode = $kakeraImg.alt;
+                        let kakeraToGet: KAKERA | undefined;
 
-    observeToReact($message, userToReact?) {
-        let checkCount = 0;
+                        for (const kakera of (bot.preferences.kakera.perToken.get("all") as Set<KAKERA>)) {
+                            if (KAKERAS[kakera].internalName === kakeraCode) {
+                                kakeraToGet = kakera;
+                                break;
+                            }
+                        }
 
-        const observer: any = setInterval(() => {
-            if (!$message || checkCount++ >= 30) return clearInterval(observer);
+                        for (const botUser of bot.users) {
+                            if (!kakeraToGet && bot.preferences.useUsers === "tokenlist") {
+                                for (const kakera of (bot.preferences.kakera.perToken.get(botUser.token) as Set<KAKERA>)) {
+                                    if (KAKERAS[kakera].internalName === kakeraCode) {
+                                        kakeraToGet = kakera;
+                                        break;
+                                    }
+                                }
+                            }
 
-            const $reactionImg: HTMLImageElement | null = $message.querySelector("button img");
+                            if (kakeraToGet) {
+                                const powerCost = kakeraToGet === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
 
-            if (!$reactionImg) return;
-
-            clearInterval(observer);
-
-            if (userToReact) {
-                const emoji: EMOJI | undefined = EMOJIS[$reactionImg.alt as keyof typeof EMOJIS];
-
-                userToReact.reactToMessage($message, emoji);
-                return;
-            }
-
-            if (!bot.preferences || !bot.preferences.kakera.perToken.has("all")) {
-                return; //# Raise error
-            }
-
-            const kakeraCode = $reactionImg.alt;
-            let kakeraToGet: KAKERA | undefined;
-
-            for (const kakera of (bot.preferences.kakera.perToken.get("all") as Set<KAKERA>)) {
-                if (KAKERAS[kakera].internalName === kakeraCode) {
-                    kakeraToGet = kakera;
-                    break;
-                }
-            }
-
-            for (const botUser of bot.users) {
-                if (!kakeraToGet) {
-                    for (const kakera of (bot.preferences.kakera.perToken.get(botUser.token) as Set<KAKERA>)) {
-                        if (KAKERAS[kakera].internalName === kakeraCode) {
-                            kakeraToGet = kakera;
-                            break;
+                                if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
+                                    botUser.reactToMessage($msg);
+                                    return;
+                                }
+                            }
                         }
                     }
                 }
-
-                if (kakeraToGet) {
-                    const powerCost = kakeraToGet === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
-
-                    if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
-                        botUser.reactToMessage($message);
-                        return;
-                    }
-                }
             }
-        }, 100);
-    }
+        });
+    },
 };
 
 let hangingPreferencesToSync: Preferences | null = null;
