@@ -7,7 +7,7 @@ import { BotUser, USER_INFO } from "./lib/bot";
 import { EMOJIS, INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID } from "./lib/consts";
 import { MESSAGES } from "./lib/messaging";
 import { KAKERAS } from "./lib/mudae";
-import { getLastFromArray, jsonMapSetReviver, pickRandom } from "./lib/utils";
+import { getLastFromArray, jsonMapSetReviver, pickRandom, randomFloat } from "./lib/utils";
 
 const bot: BotManager = {
     state: "waiting_injection",
@@ -515,15 +515,13 @@ const bot: BotManager = {
                 }
 
                 if (!$footer || !$footer.innerText.includes("Pertence")) {
-                    let $interestingCharacterMsg: HTMLElement | null | undefined;
-                    let isWished: boolean | undefined;
+                    let isThisInteresting = false;
 
                     const mentionedNicknames: string[] = [...$msg.querySelectorAll("span.mention")].map($mention => ($mention as HTMLElement).innerText.slice(1));
 
                     for (const mentionedNick of mentionedNicknames) {
                         if (bot.getUserWithCriteria(user => user.nick === mentionedNick)) {
-                            $interestingCharacterMsg = $msg;
-                            isWished = true;
+                            isThisInteresting = true;
                             break;
                         }
                     }
@@ -537,21 +535,29 @@ const bot: BotManager = {
                     //     };
                     // }
 
-                    if ($interestingCharacterMsg) {
+                    if (isThisInteresting) {
                         //# notify about found character
 
                         if (marriageableUser) {
                             //# Verify if marriageableUser can still marry after all delay calculations (In case of multiple marriageable characters at the same time)
 
+                            let claimDelay = bot.preferences.claim.delay;
+
+                            if (claimDelay > 0) {
+                                if (bot.preferences.claim.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
+
+                                claimDelay *= 1000;
+                            }
+
                             const isProtected = !!$msg.querySelector("img[alt=':wishprotect:']");
 
                             if (!isProtected || (isProtected && marriageableUser.id === replyUserId)) {
-                                setTimeout(() => marriageableUser.reactToMessage($msg), 200);
+                                setTimeout(() => marriageableUser.reactToMessage($msg), 250 + claimDelay);
                                 return;
                             }
 
                             /// Delay to claim protected wishes
-                            setTimeout(() => marriageableUser.reactToMessage($msg), 2905);
+                            setTimeout(() => marriageableUser.reactToMessage($msg), 2905 + Math.max(claimDelay - 2905, 0));
                             return;
                         }
 
@@ -590,6 +596,15 @@ const bot: BotManager = {
                                 const powerCost = kakeraToGet === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
 
                                 if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
+                                    let claimDelay = bot.preferences.kakera.delay;
+
+                                    if (claimDelay > 0) {
+                                        if (bot.preferences.kakera.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
+
+                                        setTimeout(() => botUser.reactToMessage($msg), claimDelay * 1000);
+                                        return;
+                                    }
+
                                     botUser.reactToMessage($msg);
                                     return;
                                 }
