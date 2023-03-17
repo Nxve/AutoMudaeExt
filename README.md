@@ -3,12 +3,9 @@ Automates the use of Mudae bot in Discord. This is the Chrome Extension version 
 
 ## ⚠ Disclaimer
 It is still in early development, thus unavailable in webstore and not really functional by now.
-You can expect it to be available for use after the completion of the below roadmap, _not including after plans_:
+You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
 #### Roadmap to get it working:
-- Try claiming character/kakera even before Mudae appending a button
-- Hotreloading preferences in running bots
-- When clearing preferences, it should stop the bot in every Discord page
 - Summary about usage
 - Logs:
     - Two categories:
@@ -18,6 +15,7 @@ You can expect it to be available for use after the completion of the below road
 - Notifications: Some of the above events should trigger notifications
 - Option to watch for mentioned nicknames: sniping
 - Add to total claimed kakera those received from EMERALD IV reward
+- Get guild config from `/server settings`
 - Remove the necessity of a custom avatar
 - Add other language support
 - Version control over preferences
@@ -35,8 +33,8 @@ You can expect it to be available for use after the completion of the below road
     - Change dropdowns to Discord's style
     - Add a fade out/in to scrollbar thumb when not active
 - Better logic/performance:
-    - `observeToReact` should use MutationObserver
     - Handle hourly reset
+    - Prevent tab from going inactive
 - List of characters to claim even if not wished
     - Maybe whole series too
 - Option to use $dk, $daily
