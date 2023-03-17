@@ -1,14 +1,81 @@
 #App {
-  --items-padding-inline: 4px;
-  --app-width: 200px;
+  display: flex;
+}
 
-  width: var(--app-width);
+/* Aside Panel */
+
+aside {
+  --aside-width: 20px;
+  width: var(--aside-width);
+  padding: 5px;
+  gap: 5px;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--primary-800);
+}
+
+aside>div {
+  width: var(--aside-width);
+  height: var(--aside-width);
+  display: grid;
+  place-content: center;
+  background-color: var(--primary-560);
+  border-radius: 33%;
+  cursor: pointer;
+  transition: 200ms;
+}
+
+#aside-events {
+  color: var(--white-530);
+}
+
+#aside-summary {
+  color: var(--white-530);
+}
+
+#aside-warns {
+  color: var(--yellow-260);
+}
+
+#aside-errors {
+  color: var(--red-400);
+}
+
+aside>div:hover {
+  background-color: var(--primary-500);
+}
+
+aside>div[data-notifications-count]::before{
+  content: attr(data-notifications-count);
+  position: absolute;
+  right: -3px;
+  bottom: -25%;
+  min-width: 7px;
+  /* width: 10px; */
+  height: 10px;
+  padding-inline: 1px;
+  border-radius: 3px;
+  font-size: .6rem;
+  font-weight: 500;
+  text-align: center;
+  color: white;
+  background-color: red;
+  pointer-events: none;
+}
+
+/* Main Menu */
+
+main {
+  --main-width: 200px;
+  --items-padding-inline: 4px;
+
+  width: var(--main-width);
   background-color: var(--primary-700);
   transition: width 200ms;
 }
 
-#App.wide {
-  width: 300px;
+main.wide {
+  --main-width: 300px;
 }
 
 /* Header */
@@ -266,6 +333,13 @@ input[type=range]:focus {
   pointer-events: none;
   user-select: none;
   animation: opacity-up 150ms forwards;
+}
+
+[id^="aside-"][data-tooltip]:hover::after {
+  bottom: 0%;
+  margin-bottom: 0;
+  left: 100%;
+  margin-left: 6px;
 }
 
 @keyframes opacity-up {
