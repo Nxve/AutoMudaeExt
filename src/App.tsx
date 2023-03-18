@@ -34,11 +34,13 @@ const defaultPreferences = (): Preferences => ({
 
 type MenuCategory = "bot" | "guild" | "extra" | null;
 type MenuSubcategory = "tokenlist" | "claim" | "kakera" | "notifications" | null;
+type InfoPanel = "summary" | "events" | "warns" | "errors" | null;
 
 function App() {
   /// Popup state
   const [menuCategory, setMenuCategory] = useState<MenuCategory>(null);
   const [menuSubcategory, setMenuSubcategory] = useState<MenuSubcategory>(null);
+  const [infoPanel, setInfoPanel] = useState<InfoPanel>(null);
   const [configuringKakeraPerToken, setConfiguringKakeraPerToken] = useState("");
   const [tokenList, setTokenList] = useState<string[]>([]);
   const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
@@ -94,7 +96,7 @@ function App() {
   };
 
   const toggleMenuSubcategory = (subcategory?: MenuSubcategory) => {
-    if (!subcategory){
+    if (!subcategory) {
       setMenuSubcategory(null);
       return;
     }
@@ -122,6 +124,10 @@ function App() {
     }
 
     setMenuSubcategory(subcategory === menuSubcategory ? null : subcategory);
+  };
+
+  const toggleInfoPanel = (infoPanelCategory?: InfoPanel) => {
+    setInfoPanel(infoPanelCategory ? (infoPanelCategory === infoPanel ? null : infoPanelCategory) : null);
   };
 
   const toggleKakeraForToken = (token: string, kakera: KAKERA) => {
@@ -290,263 +296,276 @@ function App() {
   }, [preferences, hasLoadedPreferences]);
 
   return (
-    <div id="App">
-      <aside>
-        {
-          discordTab && (botState === "idle" || botState === "running") &&
-          <div id="aside-summary" data-tooltip="Summary">
-            {SVGS.STACK}
-          </div>
-        }
-        <div id="aside-events" data-tooltip="Events" data-notifications-count="3">
-          {SVGS.LIST_CHECKED}
+    <div id="app">
+      {
+        infoPanel !== null &&
+        <div id="info-panel-wrapper">
+          <section id="info-panel">
+            <h1>{infoPanel}</h1>
+            {Array(15).fill("A").map(item =>
+              <span>{item}</span>
+            )}
+          </section>
         </div>
-        <div id="aside-warns" data-tooltip="Warns" data-notifications-count="239">
-          {SVGS.EXCLAMATION}
-        </div>
-        <div id="aside-errors" data-tooltip="Errors" data-notifications-count="1.2k">
-          {SVGS.EXCLAMATION}
-        </div>
-      </aside>
-      <main {...isWide() && ({ className: "wide" })}>
-        <header>
-          <img src="128.png" alt="App Icon" />
-          <span>AutoMudae</span>
-        </header>
-        <div className="item-wrapper">
-          <button {...(menuCategory === "bot" && { className: "toggle" })} onClick={() => toggleMenuCategory("bot")}>
-            {SVGS.GEAR}
-            <span>Bot Config</span>
-            {SVGS.ARROW}
-          </button>
-        </div>
-        {
-          menuCategory === "bot" &&
-          <>
-            <div className="item-wrapper inner-0">
-              <span>Use</span>
-              <select value={preferences.useUsers} onChange={(e) => setPreferences({ ...preferences, useUsers: e.target.value as PrefUseUsers })}>
-                <option value="logged">Logged users</option>
-                <option value="tokenlist">Token list</option>
-              </select>
+      }
+      <main>
+        <section id="middle-menu">
+          {
+            discordTab && (botState === "idle" || botState === "running") &&
+            <div className="info-button summary" data-tooltip="Summary" onClick={() => toggleInfoPanel("summary")}>
+              {SVGS.STACK}
             </div>
-            {
-              preferences.useUsers === "tokenlist" &&
-              <>
-                <div className="item-wrapper inner-0">
-                  <span>Token List</span>
-                  <div className="flex-inline-wrapper">
-                    {
-                      menuSubcategory === "tokenlist" &&
-                      <>
-                        <button className="button-red" data-tooltip="Clear" onClick={tokenListClear}>
-                          {SVGS.X}
-                        </button>
-                        <button className="button-green" data-tooltip="Add" onClick={tokenListAdd}>
-                          {SVGS.PLUS}
-                        </button>
-                      </>
-                    }
-                    <button {...(menuSubcategory === "tokenlist" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("tokenlist")}>
-                      {SVGS.ARROW}
-                    </button>
-                  </div>
-                </div>
-                {
-                  menuSubcategory === "tokenlist" &&
-                  <div className="item-wrapper inner-1">
-                    <div className="list">
-                      {tokenList.map((token, i) =>
-                        <input type="text" spellCheck="false" value={token} onChange={(e) => { tokenList[i] = e.target.value; setTokenList([...tokenList]) }} onBlur={(e) => validateTokenInput(i, e.target.value)} key={`token-${i}`} />
-                      )}
-                    </div>
-                  </div>
-                }
-              </>
-            }
-            <div className="item-wrapper inner-0">
-              <span>Roll</span>
-              <div className="flex-inline-wrapper">
-                <input type="checkbox" checked={preferences.roll.enabled} onChange={(e) => setPreferences(pref => { pref.roll.enabled = e.target.checked; return { ...pref } })} />
-                <select value={preferences.roll.type} onChange={(e) => setPreferences(pref => { pref.roll.type = e.target.value as PrefRollType; return { ...pref } })}>
-                  <option value="wx">wx</option>
-                  <option value="wa">wa</option>
-                  <option value="wg">wg</option>
-                  <option value="hx">hx</option>
-                  <option value="ha">ha</option>
-                  <option value="hg">hg</option>
+          }
+          <div className="info-button events" data-tooltip="Events" data-notifications-count="3" onClick={() => toggleInfoPanel("events")}>
+            {SVGS.LIST_CHECKED}
+          </div>
+          <div className="info-button warns" data-tooltip="Warns" onClick={() => toggleInfoPanel("warns")}>
+            {SVGS.EXCLAMATION}
+          </div>
+          <div className="info-button errors" data-tooltip="Errors" data-notifications-count="2" onClick={() => toggleInfoPanel("errors")}>
+            {SVGS.EXCLAMATION}
+          </div>
+        </section>
+        <section id="main-menu" {...isWide() && ({ className: "wide" })}>
+          <header>
+            <img src="128.png" alt="App Icon" />
+            <span>AutoMudae</span>
+          </header>
+          <div className="item-wrapper">
+            <button {...(menuCategory === "bot" && { className: "toggle" })} onClick={() => toggleMenuCategory("bot")}>
+              {SVGS.GEAR}
+              <span>Bot Config</span>
+              {SVGS.ARROW}
+            </button>
+          </div>
+          {
+            menuCategory === "bot" &&
+            <>
+              <div className="item-wrapper inner-0">
+                <span>Use</span>
+                <select value={preferences.useUsers} onChange={(e) => setPreferences({ ...preferences, useUsers: e.target.value as PrefUseUsers })}>
+                  <option value="logged">Logged users</option>
+                  <option value="tokenlist">Token list</option>
                 </select>
               </div>
-            </div>
-            <div className="item-wrapper inner-0">
-              <span>Claim</span>
-              <button {...(menuSubcategory === "claim" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("claim")}>
-                {SVGS.ARROW}
-              </button>
-            </div>
-            {
-              menuSubcategory === "claim" &&
-              <>
-                <div className="item-wrapper inner-1">
-                  <span>Delay</span>
-                  <span>{preferences.claim.delay}s</span>
-                  <input type="range" min={0} max={8.1} step={.1} value={preferences.claim.delay}
-                    style={{ "--value": (preferences.claim.delay * 100 / 8.1) + "%" } as React.CSSProperties}
-                    onChange={(e) => {
-                      const delay = Number(e.target.value);
-                      setPreferences({ ...preferences, claim: { delay: delay, delayRandom: delay > 0 ? preferences.claim.delayRandom : false } })
-                    }} />
-                </div>
-                <div className="item-wrapper inner-1" data-tooltip="Random delay between 0 and the config">
-                  <span>Random</span>
-                  <input type="checkbox" checked={preferences.claim.delayRandom} disabled={preferences.claim.delay === 0} onChange={(e) => setPreferences(pref => { pref.claim.delayRandom = e.target.checked; return { ...pref } })} />
-                </div>
-              </>
-            }
-            <div className="item-wrapper inner-0">
-              <span>Kakera</span>
-              <button {...(menuSubcategory === "kakera" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("kakera")}>
-                {SVGS.ARROW}
-              </button>
-            </div>
-            {
-              menuSubcategory === "kakera" &&
-              <>
-                {(preferences.useUsers === "tokenlist" ? [...preferences.kakera.perToken.keys()] : ["all"]).map((token, i) =>
-                  <div className="item-wrapper inner-1 kakera-cfg" key={`kkcfg-${i}`}>
-                    <span>
-                      {token === "all" ? "All users" : `${minifyToken(token)}`}</span>
+              {
+                preferences.useUsers === "tokenlist" &&
+                <>
+                  <div className="item-wrapper inner-0">
+                    <span>Token List</span>
                     <div className="flex-inline-wrapper">
                       {
-                        configuringKakeraPerToken === token ?
-                          Object.keys(KAKERAS).map((_kakera, i) => {
-                            const kakera = _kakera as keyof typeof KAKERAS;
-
-                            if ((preferences.kakera.perToken.get(token) as Set<KAKERA>).has(kakera)) return null;
-
-                            return (
-                              <button className="toClaim" onClick={() => { toggleKakeraForToken(token, kakera) }} key={`kkcfg-btn-${i}`}>
-                                <img className="emoji" src={`https://cdn.discordapp.com/emojis/${KAKERAS[kakera].imgSrc}.webp?quality=lossless`} alt="" />
-                              </button>
-                            )
-                          })
-                          :
-                          [...(preferences.kakera.perToken.get(token) as Set<KAKERA>)].map((kakera, i) =>
-                            <button className="toRemove" onClick={() => { toggleKakeraForToken(token, kakera) }} key={`kkcfg-img-${i}`}>
-                              <img className="emoji" src={`https://cdn.discordapp.com/emojis/${KAKERAS[kakera].imgSrc}.webp?quality=lossless`} alt="" />
-                            </button>
-                          )
+                        menuSubcategory === "tokenlist" &&
+                        <>
+                          <button className="button-red" data-tooltip="Clear" onClick={tokenListClear}>
+                            {SVGS.X}
+                          </button>
+                          <button className="button-green" data-tooltip="Add" onClick={tokenListAdd}>
+                            {SVGS.PLUS}
+                          </button>
+                        </>
                       }
-                      <button onClick={() => setConfiguringKakeraPerToken(current => !current ? token : "")}>
-                        {configuringKakeraPerToken === token ? SVGS.X : SVGS.PLUS}
+                      <button {...(menuSubcategory === "tokenlist" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("tokenlist")}>
+                        {SVGS.ARROW}
                       </button>
                     </div>
                   </div>
-
-                )}
-                <div className="item-wrapper inner-1">
-                  <span>Delay</span>
-                  <span>{preferences.kakera.delay}s</span>
-                  <input type="range" min={0} max={8.1} step={.1} value={preferences.kakera.delay}
-                    style={{ "--value": (preferences.kakera.delay * 100 / 8.1) + "%" } as React.CSSProperties}
-                    onChange={(e) => {
-                      const delay = Number(e.target.value);
-                      preferences.kakera.delay = delay;
-                      preferences.kakera.delayRandom = delay > 0 ? preferences.kakera.delayRandom : false;
-                      setPreferences({ ...preferences });
-                    }} />
-                </div>
-                <div className="item-wrapper inner-1" data-tooltip="Random delay between 0 and the config">
-                  <span>Random</span>
-                  <input type="checkbox" checked={preferences.kakera.delayRandom} disabled={preferences.kakera.delay === 0} onChange={(e) => setPreferences(pref => { pref.kakera.delayRandom = e.target.checked; return { ...pref } })} />
-                </div>
-              </>
-            }
-            <div className="item-wrapper inner-0">
-              <span>Notifications</span>
-              <button {...(menuSubcategory === "notifications" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("notifications")}>
-                {SVGS.ARROW}
-              </button>
-            </div>
-            {
-              menuSubcategory === "notifications" &&
-              <>
-                <div className="item-wrapper inner-1">
-                  <span>Notification type</span>
-                  <select value={preferences.notifications.type} onChange={(e) => setPreferences(pref => { pref.notifications.type = e.target.value as PrefNotificationType; return { ...pref } })}>
-                    <option value="sound">Sound</option>
-                    <option value="popup">Popup</option>
-                    <option value="both">Both</option>
+                  {
+                    menuSubcategory === "tokenlist" &&
+                    <div className="item-wrapper inner-1">
+                      <div className="list">
+                        {tokenList.map((token, i) =>
+                          <input type="text" spellCheck="false" value={token} onChange={(e) => { tokenList[i] = e.target.value; setTokenList([...tokenList]) }} onBlur={(e) => validateTokenInput(i, e.target.value)} key={`token-${i}`} />
+                        )}
+                      </div>
+                    </div>
+                  }
+                </>
+              }
+              <div className="item-wrapper inner-0">
+                <span>Roll</span>
+                <div className="flex-inline-wrapper">
+                  <input type="checkbox" checked={preferences.roll.enabled} onChange={(e) => setPreferences(pref => { pref.roll.enabled = e.target.checked; return { ...pref } })} />
+                  <select value={preferences.roll.type} onChange={(e) => setPreferences(pref => { pref.roll.type = e.target.value as PrefRollType; return { ...pref } })}>
+                    <option value="wx">wx</option>
+                    <option value="wa">wa</option>
+                    <option value="wg">wg</option>
+                    <option value="hx">hx</option>
+                    <option value="ha">ha</option>
+                    <option value="hg">hg</option>
                   </select>
                 </div>
-                <div className="item-wrapper inner-1">
-                  <div id="soundlist" className="list">
-                    {
-                      Object.keys(NOTIFICATIONS).map((notification) =>
-                        <div key={`soundchk-${notification}`}>
-                          <input type="checkbox" id={`sound-${notification}`} checked={preferences.notifications.enabled.has(notification as PrefNotification)} onChange={handleSoundToggle} />
-                          <label htmlFor={`sound-${notification}`}>{NOTIFICATIONS[notification as PrefNotification]}</label>
-                        </div>
-                      )
-                    }
+              </div>
+              <div className="item-wrapper inner-0">
+                <span>Claim</span>
+                <button {...(menuSubcategory === "claim" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("claim")}>
+                  {SVGS.ARROW}
+                </button>
+              </div>
+              {
+                menuSubcategory === "claim" &&
+                <>
+                  <div className="item-wrapper inner-1">
+                    <span>Delay</span>
+                    <span>{preferences.claim.delay}s</span>
+                    <input type="range" min={0} max={8.1} step={.1} value={preferences.claim.delay}
+                      style={{ "--value": (preferences.claim.delay * 100 / 8.1) + "%" } as React.CSSProperties}
+                      onChange={(e) => {
+                        const delay = Number(e.target.value);
+                        setPreferences({ ...preferences, claim: { delay: delay, delayRandom: delay > 0 ? preferences.claim.delayRandom : false } })
+                      }} />
                   </div>
-                </div>
-              </>
-            }
-          </>
-        }
-        <div className="item-wrapper">
-          <button {...(menuCategory === "guild" && { className: "toggle" })} onClick={() => toggleMenuCategory("guild")}>
-            {SVGS.GEAR}
-            <span>Guild Config</span>
-            {SVGS.ARROW}
-          </button>
-        </div>
-        {
-          menuCategory === "guild" &&
-          <>
-            <div className="item-wrapper inner-0">
-              <span>Language</span>
-              <select value={preferences.languague} onChange={(e) => setPreferences({ ...preferences, languague: e.target.value as PrefLanguage })}>
-                <option value="en">English</option>
-                <option value="fr">Français</option>
-                <option value="es">Español</option>
-                <option value="pt-br">Português</option>
-              </select>
-            </div>
-          </>
-        }
-        <div className="item-wrapper">
-          <button {...(menuCategory === "extra" && { className: "toggle" })} onClick={() => toggleMenuCategory("extra")}>
-            {SVGS.GEAR}
-            <span>Extra</span>
-            {SVGS.ARROW}
-          </button>
-        </div>
-        {
-          menuCategory === "extra" &&
-          <div className="item-wrapper inner-0">
-            <button onClick={reset}>Reset all config</button>
-          </div>
-        }
-        {
-          discordTab &&
+                  <div className="item-wrapper inner-1" data-tooltip="Random delay between 0 and the config">
+                    <span>Random</span>
+                    <input type="checkbox" checked={preferences.claim.delayRandom} disabled={preferences.claim.delay === 0} onChange={(e) => setPreferences(pref => { pref.claim.delayRandom = e.target.checked; return { ...pref } })} />
+                  </div>
+                </>
+              }
+              <div className="item-wrapper inner-0">
+                <span>Kakera</span>
+                <button {...(menuSubcategory === "kakera" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("kakera")}>
+                  {SVGS.ARROW}
+                </button>
+              </div>
+              {
+                menuSubcategory === "kakera" &&
+                <>
+                  {(preferences.useUsers === "tokenlist" ? [...preferences.kakera.perToken.keys()] : ["all"]).map((token, i) =>
+                    <div className="item-wrapper inner-1 kakera-cfg" key={`kkcfg-${i}`}>
+                      <span>
+                        {token === "all" ? "All users" : `${minifyToken(token)}`}</span>
+                      <div className="flex-inline-wrapper">
+                        {
+                          configuringKakeraPerToken === token ?
+                            Object.keys(KAKERAS).map((_kakera, i) => {
+                              const kakera = _kakera as keyof typeof KAKERAS;
+
+                              if ((preferences.kakera.perToken.get(token) as Set<KAKERA>).has(kakera)) return null;
+
+                              return (
+                                <button className="toClaim" onClick={() => { toggleKakeraForToken(token, kakera) }} key={`kkcfg-btn-${i}`}>
+                                  <img className="emoji" src={`https://cdn.discordapp.com/emojis/${KAKERAS[kakera].imgSrc}.webp?quality=lossless`} alt="" />
+                                </button>
+                              )
+                            })
+                            :
+                            [...(preferences.kakera.perToken.get(token) as Set<KAKERA>)].map((kakera, i) =>
+                              <button className="toRemove" onClick={() => { toggleKakeraForToken(token, kakera) }} key={`kkcfg-img-${i}`}>
+                                <img className="emoji" src={`https://cdn.discordapp.com/emojis/${KAKERAS[kakera].imgSrc}.webp?quality=lossless`} alt="" />
+                              </button>
+                            )
+                        }
+                        <button onClick={() => setConfiguringKakeraPerToken(current => !current ? token : "")}>
+                          {configuringKakeraPerToken === token ? SVGS.X : SVGS.PLUS}
+                        </button>
+                      </div>
+                    </div>
+
+                  )}
+                  <div className="item-wrapper inner-1">
+                    <span>Delay</span>
+                    <span>{preferences.kakera.delay}s</span>
+                    <input type="range" min={0} max={8.1} step={.1} value={preferences.kakera.delay}
+                      style={{ "--value": (preferences.kakera.delay * 100 / 8.1) + "%" } as React.CSSProperties}
+                      onChange={(e) => {
+                        const delay = Number(e.target.value);
+                        preferences.kakera.delay = delay;
+                        preferences.kakera.delayRandom = delay > 0 ? preferences.kakera.delayRandom : false;
+                        setPreferences({ ...preferences });
+                      }} />
+                  </div>
+                  <div className="item-wrapper inner-1" data-tooltip="Random delay between 0 and the config">
+                    <span>Random</span>
+                    <input type="checkbox" checked={preferences.kakera.delayRandom} disabled={preferences.kakera.delay === 0} onChange={(e) => setPreferences(pref => { pref.kakera.delayRandom = e.target.checked; return { ...pref } })} />
+                  </div>
+                </>
+              }
+              <div className="item-wrapper inner-0">
+                <span>Notifications</span>
+                <button {...(menuSubcategory === "notifications" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("notifications")}>
+                  {SVGS.ARROW}
+                </button>
+              </div>
+              {
+                menuSubcategory === "notifications" &&
+                <>
+                  <div className="item-wrapper inner-1">
+                    <span>Notification type</span>
+                    <select value={preferences.notifications.type} onChange={(e) => setPreferences(pref => { pref.notifications.type = e.target.value as PrefNotificationType; return { ...pref } })}>
+                      <option value="sound">Sound</option>
+                      <option value="popup">Popup</option>
+                      <option value="both">Both</option>
+                    </select>
+                  </div>
+                  <div className="item-wrapper inner-1">
+                    <div id="soundlist" className="list">
+                      {
+                        Object.keys(NOTIFICATIONS).map((notification) =>
+                          <div key={`soundchk-${notification}`}>
+                            <input type="checkbox" id={`sound-${notification}`} checked={preferences.notifications.enabled.has(notification as PrefNotification)} onChange={handleSoundToggle} />
+                            <label htmlFor={`sound-${notification}`}>{NOTIFICATIONS[notification as PrefNotification]}</label>
+                          </div>
+                        )
+                      }
+                    </div>
+                  </div>
+                </>
+              }
+            </>
+          }
           <div className="item-wrapper">
-            {/* //# Replace these calls */}
-            <button
-              {... !canToggleRun() && {
-                disabled: true,
-                ...(getCantRunReason() && {
-                  "data-tooltip": getCantRunReason()
-                })
-              }}
-              onClick={toggleRun}
-            >
-              {BOT_STATES[botState].buttonSVG && SVGS[BOT_STATES[botState].buttonSVG as keyof typeof SVGS]}
-              <span>{BOT_STATES[botState].buttonLabel}</span>
+            <button {...(menuCategory === "guild" && { className: "toggle" })} onClick={() => toggleMenuCategory("guild")}>
+              {SVGS.GEAR}
+              <span>Guild Config</span>
+              {SVGS.ARROW}
             </button>
           </div>
-        }
+          {
+            menuCategory === "guild" &&
+            <>
+              <div className="item-wrapper inner-0">
+                <span>Language</span>
+                <select value={preferences.languague} onChange={(e) => setPreferences({ ...preferences, languague: e.target.value as PrefLanguage })}>
+                  <option value="en">English</option>
+                  <option value="fr">Français</option>
+                  <option value="es">Español</option>
+                  <option value="pt-br">Português</option>
+                </select>
+              </div>
+            </>
+          }
+          <div className="item-wrapper">
+            <button {...(menuCategory === "extra" && { className: "toggle" })} onClick={() => toggleMenuCategory("extra")}>
+              {SVGS.GEAR}
+              <span>Extra</span>
+              {SVGS.ARROW}
+            </button>
+          </div>
+          {
+            menuCategory === "extra" &&
+            <div className="item-wrapper inner-0">
+              <button onClick={reset}>Reset all config</button>
+            </div>
+          }
+          {
+            discordTab &&
+            <div className="item-wrapper">
+              {/* //# Replace these calls */}
+              <button
+                {... !canToggleRun() && {
+                  disabled: true,
+                  ...(getCantRunReason() && {
+                    "data-tooltip": getCantRunReason()
+                  })
+                }}
+                onClick={toggleRun}
+              >
+                {BOT_STATES[botState].buttonSVG && SVGS[BOT_STATES[botState].buttonSVG as keyof typeof SVGS]}
+                <span>{BOT_STATES[botState].buttonLabel}</span>
+              </button>
+            </div>
+          }
+        </section>
       </main>
     </div>
   );

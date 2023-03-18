@@ -1,12 +1,38 @@
-#App {
+#app {
+  --panels-width: 200px;
+  --middle-menu-width: 20px;
+
+  width: fit-content;
   display: flex;
 }
 
-/* Aside Panel */
+main {
+  display: flex;
+}
 
-aside {
-  --aside-width: 20px;
-  width: var(--aside-width);
+/* Info Panel */
+
+#info-panel-wrapper {
+  position: relative;
+  width: var(--panels-width);
+}
+
+#info-panel {
+  position: absolute;
+  right: 0;
+  width: var(--panels-width);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: overlay;
+  background-color: var(--primary-630);
+}
+
+/* Middle Menu */
+
+#middle-menu {
+  width: var(--middle-menu-width);
   padding: 5px;
   gap: 5px;
   display: flex;
@@ -14,9 +40,9 @@ aside {
   background-color: var(--primary-800);
 }
 
-aside>div {
-  width: var(--aside-width);
-  height: var(--aside-width);
+.info-button {
+  width: var(--middle-menu-width);
+  height: var(--middle-menu-width);
   display: grid;
   place-content: center;
   background-color: var(--primary-560);
@@ -25,27 +51,27 @@ aside>div {
   transition: 200ms;
 }
 
-#aside-events {
+.info-button.events {
   color: var(--white-530);
 }
 
-#aside-summary {
+.info-button.summary {
   color: var(--white-530);
 }
 
-#aside-warns {
+.info-button.warns {
   color: var(--yellow-260);
 }
 
-#aside-errors {
+.info-button.errors {
   color: var(--red-400);
 }
 
-aside>div:hover {
+#middle-menu>div:hover {
   background-color: var(--primary-500);
 }
 
-aside>div[data-notifications-count]::before{
+#middle-menu>div[data-notifications-count]::before {
   content: attr(data-notifications-count);
   position: absolute;
   right: -3px;
@@ -65,17 +91,15 @@ aside>div[data-notifications-count]::before{
 
 /* Main Menu */
 
-main {
-  --main-width: 200px;
+#main-menu {
   --items-padding-inline: 4px;
-
-  width: var(--main-width);
+  width: var(--panels-width);
   background-color: var(--primary-700);
   transition: width 200ms;
 }
 
-main.wide {
-  --main-width: 300px;
+#main-menu.wide {
+  --panels-width: 300px;
 }
 
 /* Header */
@@ -85,7 +109,7 @@ header {
   align-items: center;
   gap: 10px;
   padding: 5px;
-  background-color: var(--primary-660);
+  background-color: var(--primary-630);
   color: var(--header-primary);
   font-weight: 600;
   pointer-events: none;
@@ -335,7 +359,7 @@ input[type=range]:focus {
   animation: opacity-up 150ms forwards;
 }
 
-[id^="aside-"][data-tooltip]:hover::after {
+.info-button[data-tooltip]:hover::after {
   bottom: 0%;
   margin-bottom: 0;
   left: 100%;
