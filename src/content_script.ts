@@ -1,13 +1,13 @@
 import type { BotManager, Preferences } from "./lib/bot";
-import type { EMOJI } from "./lib/consts";
 import type { Message } from "./lib/messaging";
 import type { KAKERA } from "./lib/mudae";
 import { DISCORD_INFO } from "./lib/bot";
 import { BotUser, USER_INFO } from "./lib/bot";
-import { EMOJIS, INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID } from "./lib/consts";
+import { INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID } from "./lib/consts";
 import { MESSAGES } from "./lib/messaging";
 import { KAKERAS } from "./lib/mudae";
-import { getLastFromArray, jsonMapSetReviver, pickRandom, randomFloat } from "./lib/utils";
+import { getLastFromArray, jsonMapSetReviver, randomFloat } from "./lib/utils";
+import { EVENTS } from "./lib/events";
 
 const bot: BotManager = {
     state: "waiting_injection",
@@ -23,7 +23,19 @@ const bot: BotManager = {
     nonce: Math.floor(Math.random() * 1000000),
     chatObserver: new MutationObserver(ms => ms.forEach(m => { if (m.addedNodes.length) { bot.handleNewChatAppend(m.addedNodes) } })),
 
-    Message: {
+    log: {
+        warn(message) {
+            chrome.runtime.sendMessage({ id: MESSAGES.BOT.WARN, data: message });
+        },
+        error(message, isCritical) {
+            chrome.runtime.sendMessage({ id: MESSAGES.BOT.ERROR, data: { message, isCritical } });
+        },
+        event(eventType, content) {
+            chrome.runtime.sendMessage({ id: MESSAGES.BOT.EVENT, data: { eventType, content } });
+        },
+    },
+
+    message: {
         getId($message) {
             return getLastFromArray($message.id.split("-"));
         },
@@ -46,7 +58,7 @@ const bot: BotManager = {
                 }
 
                 if (!$avatar && !$targetMessage) {
-                    //# Raise error
+                    bot.log.error("Couldn't get author ID from message [?]", false); //# Add reference to message
                     return;
                 }
             }
@@ -81,6 +93,12 @@ const bot: BotManager = {
             }
             this._t.clear();
         }
+    },
+
+    error(message) {
+        this.toggle();
+        this.state = "error";
+        this.log.error(message, true);
     },
 
     hasNeededInfo() {
@@ -120,7 +138,10 @@ const bot: BotManager = {
         let marriageableUser;
 
         for (const user of this.users) {
-            if (!user.nick) return; //# Raise error
+            if (!user.nick) {
+                this.error(`Couldn't get nickname for ${user.username ? ("user " + user.username) : ("token " + user.token)}`);
+                return;
+            }
 
             if (user.info.get(USER_INFO.CAN_MARRY)) {
                 marriageableUser = user;
@@ -253,7 +274,8 @@ const bot: BotManager = {
 
             for (const user of bot.users) {
                 if (!user.hasNeededInfo()) {
-                    user.sendChannelMessage("$tu");
+                    user.sendChannelMessage("$tu")
+                        .catch(err => bot.log.error(`User ${user.username} couldn't send a channel message: ${err.message}`, false));
                     break;
                 }
             }
@@ -267,7 +289,8 @@ const bot: BotManager = {
 
         if (isRollEnabled) {
             if (userWithRolls && now - bot.lastMessageTime > INTERVAL_ROLL && now - bot.cdRoll > (INTERVAL_ROLL * .5)) {
-                userWithRolls.roll();
+                userWithRolls.roll()
+                    .catch(err => bot.log.error(`User ${userWithRolls.username} couldn't roll: ${err.message}`, false))
                 bot.cdRoll = now;
             }
         }
@@ -280,6 +303,8 @@ const bot: BotManager = {
 
                 //# if isRollEnabled auto-use $us or $rolls
                 //# notify about last reset can still marry
+
+                bot.log.warn("You have no more rolls, can still marry and it's the last reset.");
             }
 
         }
@@ -297,14 +322,17 @@ const bot: BotManager = {
         document.querySelector("div[class^='scrollerSpacer']")?.scrollIntoView();
 
         nodes.forEach(_node => {
-            if (!bot.preferences) return; //# raise error
+            if (!bot.preferences) {
+                bot.error("Couldn't find preferences when handling new chat message.");
+                return;
+            }
 
             const $msg = _node as HTMLElement;
 
             if ($msg.tagName !== "LI") return;
             bot.lastMessageTime = performance.now();
 
-            if (!bot.Message.isFromMudae($msg)) return;
+            if (!bot.message.isFromMudae($msg)) return;
 
             const $previousElement = $msg.previousElementSibling
                 ? ($msg.previousElementSibling.id === "---new-messages-bar" ? $msg.previousElementSibling.previousElementSibling : $msg.previousElementSibling)
@@ -314,7 +342,7 @@ const bot: BotManager = {
             if ($previousElement) {
                 const $previousMessage = $previousElement as HTMLElement;
 
-                const user = bot.Message.getUserWhoSent($previousMessage);
+                const user = bot.message.getUserWhoSent($previousMessage);
 
                 if (user) {
                     const command = ($previousMessage.querySelector("div[id^='message-content']") as HTMLElement | null)?.innerText;
@@ -371,9 +399,7 @@ const bot: BotManager = {
                             }
 
                             if (!user.hasNeededInfo()) {
-                                bot.toggle();
-
-                                const errMsg = `Couldn't retrieve needed info for user [${user.username}]. Make sure your $tu configuration exposes every needed information.`;
+                                bot.error(`Couldn't retrieve needed info for user ${user.username}. Make sure your $tu configuration exposes every needed information.`);
                                 return;
                             }
 
@@ -395,21 +421,21 @@ const bot: BotManager = {
 
                 if (characterClaimMatch || messageContent.includes("(Silver IV Bônus)")) {
                     let usernameThatClaimed: string | undefined
-                    // let characterName: string | undefined;
+                    let characterName: string | undefined;
 
                     if (characterClaimMatch) {
                         usernameThatClaimed = characterClaimMatch[1];
-                        // characterName = characterClaimMatch[2];
+                        characterName = characterClaimMatch[2];
                     }
 
-                    const user = bot.getUserWithCriteria((user) => user.username === usernameThatClaimed);
+                    const user = bot.getUserWithCriteria((user) => user.username != null && user.username === usernameThatClaimed);
 
                     /// Claim
                     if (user) {
                         user.info.set(USER_INFO.CAN_MARRY, false);
 
-                        //# Reenable
-                        // if (bot.preferences.notifications.enabled.has("claimcharacter")) notify;
+                        bot.log.event(EVENTS.CLAIM, { user: user.username, character: characterName });
+                        //# beep
                     } else {
                         const $mentions = $msg.querySelectorAll("span.mention");
 
@@ -428,7 +454,12 @@ const bot: BotManager = {
 
                         /// Steal
                         if (isIncludingMe) {
-                            // if (bot.preferences.notifications.enabled.has("wishsteal")) notify;
+                            const stealMessage = characterClaimMatch
+                                ? `User ${usernameThatClaimed} claimed ${characterName} wished by you.`
+                                : "A character wished by you was claimed by another user.";
+
+                            bot.log.event(EVENTS.STEAL, { user: usernameThatClaimed, character: characterName });
+                            bot.log.warn(stealMessage);
                         }
                     }
 
@@ -441,7 +472,10 @@ const bot: BotManager = {
                 if (noMoreRollsMatch) {
                     for (const botUser of bot.users) {
                         if (botUser.username === noMoreRollsMatch[1]) {
-                            setTimeout(() => botUser.sendChannelMessage("$tu"), 250);
+                            setTimeout(() => {
+                                botUser.sendChannelMessage("$tu")
+                                    .catch(err => bot.log.error(`User ${botUser.username} couldn't send a channel message: ${err.message}`, false))
+                            }, 250);
                             return;
                         }
                     }
@@ -455,14 +489,17 @@ const bot: BotManager = {
 
                     if (kakeraClaimMatch) {
                         const messageUsername = kakeraClaimMatch[1];
-                        // const kakeraQuantity = kakeraClaimMatch[2];
+                        const kakeraQuantity = kakeraClaimMatch[2];
 
                         const user = bot.getUserWithCriteria((user) => user.username === messageUsername);
 
                         if (user) {
                             const kakeraType = ($kakeraClaimStrong.previousElementSibling?.firstElementChild as HTMLImageElement | null)?.alt.replace(/:/g, '');
 
-                            if (!kakeraType) return; //# Raise error
+                            if (!kakeraType) {
+                                bot.log.error("Couldn't get kakera type from message [?]", false); //# Add reference to message
+                                return;
+                            }
 
                             const powerCost: number = kakeraType === KAKERAS.PURPLE.internalName ? 0 : (user.info.get(USER_INFO.CONSUMPTION) as number);
 
@@ -471,6 +508,8 @@ const bot: BotManager = {
 
                                 user.info.set(USER_INFO.POWER, newPower);
                             }
+
+                            bot.log.event(EVENTS.KAKERA, { user: user.username, amount: kakeraQuantity, type: kakeraType });
                         }
 
                         return;
@@ -492,12 +531,18 @@ const bot: BotManager = {
                 const $replyAvatar = $msg.querySelector("img[class^='executedCommandAvatar']") as HTMLImageElement | null;
                 let replyUserId: string | undefined;
 
-                if (!characterName) return; //# raise error
+                if (!characterName) {
+                    bot.log.error("Couldn't get character name from message [?]", false); //# Add reference to message
+                    return;
+                }
 
                 if ($replyAvatar) {
                     replyUserId = /avatars\/(\d+)\//.exec($replyAvatar.src)?.[1];
 
-                    if (!replyUserId) return; //# raise error
+                    if (!replyUserId) {
+                        bot.log.error("Couldn't identify user ID of this message [?]", false); // Add reference to message
+                        return;
+                    }
 
                     const user = bot.getUserWithCriteria((user) => user.id === replyUserId);
 
@@ -509,7 +554,7 @@ const bot: BotManager = {
                         const $embedDescription = $msg.querySelector("div[class^='embedDescription']") as HTMLElement | null;
 
                         if ($embedDescription && $embedDescription.innerText.includes("Sua nova ALMA")) {
-                            //# notify about new soulmate
+                            bot.log.event(EVENTS.SOULMATE, { character: characterName, user: user.username });
                         }
                     }
                 }
@@ -529,14 +574,14 @@ const bot: BotManager = {
                     const marriageableUser = bot.getMarriageableUser(mentionedNicknames);
 
                     //# Search in a user configured list of interesting characters
-                    // if (marriageableUser && !$interestingCharacterMsg && bot.isLastReset()) {
+                    // if (marriageableUser && !isThisInteresting && bot.isLastReset()) {
                     //     if (characterName === "hmm") {
-                    //         $interestingCharacterMsg = $msg;
+                    //         isThisInteresting = true;
                     //     };
                     // }
 
                     if (isThisInteresting) {
-                        //# notify about found character
+                        bot.log.event(EVENTS.FOUND_CHARACTER, { character: characterName });
 
                         if (marriageableUser) {
                             //# Verify if marriageableUser can still marry after all delay calculations (In case of multiple marriageable characters at the same time)
@@ -552,16 +597,22 @@ const bot: BotManager = {
                             const isProtected = !!$msg.querySelector("img[alt=':wishprotect:']");
 
                             if (!isProtected || (isProtected && marriageableUser.id === replyUserId)) {
-                                setTimeout(() => marriageableUser.reactToMessage($msg), 250 + claimDelay);
+                                setTimeout(() => {
+                                    marriageableUser.reactToMessage($msg)
+                                        .catch(err => bot.log.error(`User ${marriageableUser.username} couldn't react to a message: ${err.message}`, false));
+                                }, 250 + claimDelay);
                                 return;
                             }
 
                             /// Delay to claim protected wishes
-                            setTimeout(() => marriageableUser.reactToMessage($msg), 2905 + Math.max(claimDelay - 2905, 0));
+                            setTimeout(() => {
+                                marriageableUser.reactToMessage($msg)
+                                    .catch(err => bot.log.error(`User ${marriageableUser.username} couldn't react to a protected character: ${err.message}`, false));
+                            }, 2905 + Math.max(claimDelay - 2905, 0));
                             return;
                         }
 
-                        //# notify about cant claim
+                        bot.log.warn(`Can't claim character ${characterName} right now.`); //# Add reference to character message
                     }
 
                     return;
@@ -601,11 +652,15 @@ const bot: BotManager = {
                                     if (claimDelay > 0) {
                                         if (bot.preferences.kakera.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
 
-                                        setTimeout(() => botUser.reactToMessage($msg), claimDelay * 1000);
+                                        setTimeout(() => {
+                                            botUser.reactToMessage($msg)
+                                                .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
+                                        }, claimDelay * 1000);
                                         return;
                                     }
 
-                                    botUser.reactToMessage($msg);
+                                    botUser.reactToMessage($msg)
+                                        .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
                                     return;
                                 }
                             }
@@ -643,10 +698,10 @@ const handleExtensionMessage = (message: Message, _sender: chrome.runtime.Messag
     if (!Object.hasOwn(message, "id")) return;
 
     switch (message.id) {
-        case MESSAGES.GET_STATE:
+        case MESSAGES.APP.GET_STATE:
             sendResponse(bot.state);
             break;
-        case MESSAGES.INJECTION:
+        case MESSAGES.APP.INJECTION:
             bot.preferences = JSON.parse(message.data, jsonMapSetReviver);
 
             bot.setup()
@@ -668,7 +723,7 @@ const handleExtensionMessage = (message: Message, _sender: chrome.runtime.Messag
             /// Must return true here to keep it open waiting for async response
             /// [ref: https://developer.chrome.com/docs/extensions/mv3/messaging/#simple]
             return true;
-        case MESSAGES.TOGGLE:
+        case MESSAGES.APP.TOGGLE:
             try {
                 bot.toggle();
                 sendResponse(bot.state);
@@ -676,7 +731,7 @@ const handleExtensionMessage = (message: Message, _sender: chrome.runtime.Messag
                 sendResponse(error instanceof Error ? error.message : String(error));
             }
             break;
-        case MESSAGES.SYNC_PREFERENCES:
+        case MESSAGES.APP.SYNC_PREFERENCES:
             try {
                 const newPreferences: Preferences = JSON.parse(message.data, jsonMapSetReviver);
 
