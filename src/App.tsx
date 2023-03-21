@@ -2,6 +2,7 @@ import type { BotState, Preferences, PrefLanguage, PrefNotification, PrefNotific
 import type { KAKERA } from "./lib/mudae";
 import type { MessageID, Message } from "./lib/messaging";
 import type { Logs, Stats, Unseen, LogType } from "./lib/events";
+import type { InfoPanelType, MenuCategory, MenuSubcategory } from "./lib/app_types";
 import { blankLogs, blankStats, blankUnseen } from "./lib/events";
 import React, { useEffect, useState } from "react";
 import { isTokenValid, jsonMapSetReplacer, jsonMapSetReviver, minifyToken } from "./lib/utils";
@@ -10,7 +11,6 @@ import { MESSAGES } from "./lib/messaging";
 import { SVGS } from "./lib/svgs";
 import { KAKERAS } from "./lib/mudae";
 import "./styles/App.css";
-import type { InfoPanelType, MenuCategory, MenuSubcategory } from "./lib/app_types";
 import InfoPanel from "./components/InfoPanel";
 
 function App() {
@@ -110,8 +110,8 @@ function App() {
   const toggleInfoPanel = (infoPanelCategory?: InfoPanelType) => {
     setInfoPanel(infoPanelCategory ? (infoPanelCategory === infoPanel ? null : infoPanelCategory) : null);
 
-    if (infoPanelCategory === "events" || infoPanelCategory === "warns" || infoPanelCategory === "errors"){
-      clearUnseen(infoPanelCategory.slice(0, infoPanelCategory.length-1) as LogType);
+    if (infoPanelCategory === "events" || infoPanelCategory === "warns" || infoPanelCategory === "errors") {
+      clearUnseen(infoPanelCategory.slice(0, infoPanelCategory.length - 1) as LogType);
     }
   };
 
@@ -131,8 +131,8 @@ function App() {
 
   const clearUnseen = (logType: LogType) => {
     unseen[logType] = 0;
-    setUnseen({...unseen});
-    chrome.runtime.sendMessage({id: MESSAGES.APP.CLEAR_UNSEEN, data: logType});
+    setUnseen({ ...unseen });
+    sendWorkerMessage(MESSAGES.APP.CLEAR_UNSEEN, logType);
   };
 
   const getCantRunReason = (): string => {
@@ -175,63 +175,57 @@ function App() {
     return true;
   };
 
-  const sendMessage = (messageId: MessageID, data: any, cb: (response?: any) => void, target?: chrome.tabs.Tab | number): boolean => {
-    if (!target) {
-      chrome?.tabs?.query({ url: "https://discord.com/channels/*", currentWindow: true, status: "complete" })
-        .then((tabs) => {
-          tabs.forEach(tab => {
-            if (!tab.id) return;
-            chrome.tabs.sendMessage<Message>(tab.id, { id: messageId, data }, cb);
-          });
+  const sendTabMessage = (tab: chrome.tabs.Tab | number, messageId: MessageID, data: any, cb: (response?: any) => void) => {
+    const tabId = (typeof tab !== "number") ? tab.id : tab;
+
+    if (!tabId) return;
+
+    chrome.tabs.sendMessage<Message>(tabId, { id: messageId, data }, cb);
+  };
+
+  const broadcastMessage = (messageId: MessageID, data: any, cb: (response?: any) => void) => {
+    chrome?.tabs?.query({ url: "https://discord.com/channels/*", currentWindow: true, status: "complete" })
+      .then((tabs) => {
+        tabs.forEach(tab => {
+          if (!tab.id) return;
+          sendTabMessage(tab.id, messageId, data, cb);
         });
-      return true;
-    }
+      });
+  };
 
-    if (typeof target !== "number") target = target.id;
-
-    if (!target) return false;
-
-    chrome.tabs.sendMessage<Message>(target, { id: messageId, data }, cb);
-
-    return true;
-  }
+  const sendWorkerMessage = (messageId: MessageID, data: any, cb?: (response?: any) => void) => {
+    chrome?.runtime?.sendMessage<Message>({ id: messageId, data }, cb || (() => { }));
+  };
 
   const toggleRun = () => {
     if (!discordTab) return;
 
-    try {
-      if (botState === "waiting_injection") {
-        discordTab.autoDiscardable = false;
+    if (botState === "waiting_injection") {
+      discordTab.autoDiscardable = false;
 
-        setBotState("setup");
+      setBotState("setup");
 
-        const sent = sendMessage(MESSAGES.APP.INJECTION, JSON.stringify(preferences, jsonMapSetReplacer), (err?: Error) => {
-          if (err) {
-            setDynamicCantRunReason(err.message);
-            setBotState("injection_error");
-            return;
-          }
+      sendTabMessage(discordTab, MESSAGES.APP.INJECTION, JSON.stringify(preferences, jsonMapSetReplacer), (err?: Error) => {
+        if (err) {
+          setDynamicCantRunReason(err.message);
+          setBotState("injection_error");
+          return;
+        }
 
-          setBotState("running");
-        }, discordTab);
+        setBotState("running");
+      });
 
-        if (!sent) throw Error("Couldn't find Discord ID. Refresh the page");
-      } else if (botState === "running" || botState === "idle") {
-        const sent = sendMessage(MESSAGES.APP.TOGGLE, null, (response?: Error | BotState) => {
-          if (response && !(response instanceof Error)) {
-            setBotState(response);
-            return;
-          }
+    } else if (botState === "running" || botState === "idle") {
 
-          setDynamicCantRunReason(response ? response.message : "Invalid response from toggle message.");
-          setBotState("error");
-        }, discordTab);
+      sendTabMessage(discordTab, MESSAGES.APP.TOGGLE, null, (response?: Error | BotState) => {
+        if (response && !(response instanceof Error)) {
+          setBotState(response);
+          return;
+        }
 
-        if (!sent) throw Error("Couldn't find Discord ID. Refresh the page");
-      }
-    } catch (error) {
-      setDynamicCantRunReason(error instanceof Error ? error.message : String(error));
-      setBotState("error");
+        setDynamicCantRunReason(response ? response.message : "Invalid response from toggle message.");
+        setBotState("error");
+      });
     }
   };
 
@@ -249,7 +243,7 @@ function App() {
       .catch(console.error)
       .finally(() => setHasLoadedPreferences(true));
 
-    chrome?.runtime?.sendMessage({ id: MESSAGES.APP.GET_EVERYTHING }, (data?: { status: any, stats: Stats, logs: Logs, unseen: Unseen }) => {
+    sendWorkerMessage(MESSAGES.APP.GET_EVERYTHING, null, (data?: { status: any, stats: Stats, logs: Logs, unseen: Unseen }) => {
       if (data) {
         setStats(data.stats)
         setLogs(data.logs);
@@ -282,10 +276,10 @@ function App() {
 
     if (!hasLoadedPreferences) return;
 
-    sendMessage(
+    broadcastMessage(
       MESSAGES.APP.SYNC_PREFERENCES,
       JSON.stringify(preferences, jsonMapSetReplacer),
-      (err?: Error) => {if (err) console.error(err)}
+      (err?: Error) => { if (err) console.error(err) }
     );
 
     chrome?.storage?.local.set({
@@ -299,7 +293,7 @@ function App() {
       {
         infoPanel !== null &&
         <div id="info-panel-wrapper">
-          <InfoPanel infoType={infoPanel} logs={logs}/>
+          <InfoPanel infoType={infoPanel} logs={logs} />
         </div>
       }
       <main>
