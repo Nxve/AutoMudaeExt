@@ -361,7 +361,7 @@ export const defaultPreferences = (): Preferences => ({
         delayRandom: false
     },
     kakera: {
-        delay: 0,
+        delay: .1,
         delayRandom: false,
         perToken: new Map([["all", new Set()]])
     }
