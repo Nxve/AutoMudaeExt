@@ -33,7 +33,12 @@ const updateBadge = (unseen: Unseen, logType?: LogType) => {
 
     chrome.action.setBadgeText({ text: count ? String(count) : "" });
 
-    if (logType) chrome.action.setBadgeBackgroundColor({ color: LOG_BADGE_COLORS[logType] });
+    if (logType) {
+        if ((logType !== LOG_TYPES.ERROR && unseen.error > 0) ||
+            (logType === LOG_TYPES.EVENT && unseen.warn > 0)) return;
+
+        chrome.action.setBadgeBackgroundColor({ color: LOG_BADGE_COLORS[logType] });
+    }
 };
 
 const getUnseen = async (): Promise<Unseen> => {
