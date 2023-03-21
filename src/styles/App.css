@@ -31,7 +31,7 @@ main {
 #info-list {
   --items-color-bg: var(--primary-560);
   --items-color-text: white;
-
+  flex-grow: 1;
   overflow-y: overlay;
   overflow-x: hidden;
 }
