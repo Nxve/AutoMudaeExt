@@ -6,13 +6,8 @@ It is still in early development, thus unavailable in webstore and not really fu
 You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
 #### Roadmap to get it working:
-- Summary about usage
-- Logs:
-    - Two categories:
-        - Overrall events: Claimings, soulmates, ...
-        - Warns & Errors
-    - Catch from async methods: reactToMessage, sendChannelMessage, roll, ...
-- Notifications: Some of the above events should trigger notifications
+- When getting state from a tab, get last error too
+- Notifications: Some of the events should trigger sound notifications
 - Option to watch for mentioned nicknames: sniping
 - Add to total claimed kakera those received from EMERALD IV reward
 - Get guild config from `/server settings`
@@ -35,6 +30,7 @@ You can expect it to be available for use after the completion of the below road
 - Better logic/performance:
     - Handle hourly reset
     - Prevent tab from going inactive
+    - Should only `think` after the previous think
 - List of characters to claim even if not wished
     - Maybe whole series too
 - Option to use $dk, $daily

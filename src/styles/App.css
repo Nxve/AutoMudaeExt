@@ -25,8 +25,39 @@ main {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  background-color: var(--primary-700);
+}
+
+#info-list {
+  --items-color-bg: var(--primary-560);
+  --items-color-text: white;
+
   overflow-y: overlay;
-  background-color: var(--primary-630);
+  overflow-x: hidden;
+}
+
+#info-list.warns {
+  --items-color-bg: var(--yellow-700);
+}
+
+#info-list.errors {
+  --items-color-bg: var(--red-700);
+}
+
+.info-list-item {
+  color: var(--items-color-text);
+  background-color: var(--items-color-bg);
+  word-break: break-all; /* Fallback */
+  line-break: anywhere;
+}
+
+.info-list-item.critical {
+  --items-color-bg: var(--red-600);
+}
+
+.info-list-item .time {
+  font-size: .5rem;
+  margin-right: .3rem;
 }
 
 /* Middle Menu */
@@ -45,18 +76,11 @@ main {
   height: var(--middle-menu-width);
   display: grid;
   place-content: center;
+  color: var(--white-530);
   background-color: var(--primary-560);
   border-radius: 33%;
   cursor: pointer;
   transition: 200ms;
-}
-
-.info-button.events {
-  color: var(--white-530);
-}
-
-.info-button.summary {
-  color: var(--white-530);
 }
 
 .info-button.warns {
@@ -100,30 +124,6 @@ main {
 
 #main-menu.wide {
   --panels-width: 300px;
-}
-
-/* Header */
-
-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px;
-  background-color: var(--primary-630);
-  color: var(--header-primary);
-  font-weight: 600;
-  pointer-events: none;
-}
-
-header img {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-}
-
-header span {
-  flex-grow: 1;
-  text-align: center;
 }
 
 /* Items & Interactables */
@@ -319,6 +319,28 @@ input[type=range]:focus {
 }
 
 /* Generic structures */
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px;
+  background-color: var(--primary-630);
+  color: var(--header-primary);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+header img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+}
+
+header span {
+  flex-grow: 1;
+  text-align: center;
+}
 
 .flex-inline-wrapper {
   display: flex;

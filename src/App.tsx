@@ -1,50 +1,31 @@
 import type { BotState, Preferences, PrefLanguage, PrefNotification, PrefNotificationType, PrefRollType, PrefUseUsers } from "./lib/bot";
 import type { KAKERA } from "./lib/mudae";
 import type { MessageID, Message } from "./lib/messaging";
+import type { Logs, Stats, Unseen, LogType } from "./lib/events";
+import { blankLogs, blankStats, blankUnseen } from "./lib/events";
 import React, { useEffect, useState } from "react";
 import { isTokenValid, jsonMapSetReplacer, jsonMapSetReviver, minifyToken } from "./lib/utils";
-import { BOT_STATES, NOTIFICATIONS } from "./lib/bot";
+import { BOT_STATES, NOTIFICATIONS, defaultPreferences } from "./lib/bot";
 import { MESSAGES } from "./lib/messaging";
 import { SVGS } from "./lib/svgs";
 import { KAKERAS } from "./lib/mudae";
 import "./styles/App.css";
-
-const defaultPreferences = (): Preferences => ({
-  useUsers: "logged",
-  tokenList: new Set(),
-  languague: "en",
-  notifications: {
-    type: "sound",
-    enabled: new Set()
-  },
-  roll: {
-    enabled: true,
-    type: "wx"
-  },
-  claim: {
-    delay: 0,
-    delayRandom: false
-  },
-  kakera: {
-    delay: 0,
-    delayRandom: false,
-    perToken: new Map([["all", new Set()]])
-  }
-});
-
-type MenuCategory = "bot" | "guild" | "extra" | null;
-type MenuSubcategory = "tokenlist" | "claim" | "kakera" | "notifications" | null;
-type InfoPanel = "summary" | "events" | "warns" | "errors" | null;
+import type { InfoPanelType, MenuCategory, MenuSubcategory } from "./lib/app_types";
+import InfoPanel from "./components/InfoPanel";
 
 function App() {
-  /// Popup state
+  /// App state
   const [menuCategory, setMenuCategory] = useState<MenuCategory>(null);
   const [menuSubcategory, setMenuSubcategory] = useState<MenuSubcategory>(null);
-  const [infoPanel, setInfoPanel] = useState<InfoPanel>(null);
+  const [infoPanel, setInfoPanel] = useState<InfoPanelType>(null);
   const [configuringKakeraPerToken, setConfiguringKakeraPerToken] = useState("");
   const [tokenList, setTokenList] = useState<string[]>([]);
   const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
+
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences());
+  const [logs, setLogs] = useState<Logs>(blankLogs());
+  const [stats, setStats] = useState<Stats>(blankStats());
+  const [unseen, setUnseen] = useState<Unseen>(blankUnseen());
 
   /// Bot state
   const [discordTab, setDiscordTab] = useState<chrome.tabs.Tab>();
@@ -126,8 +107,12 @@ function App() {
     setMenuSubcategory(subcategory === menuSubcategory ? null : subcategory);
   };
 
-  const toggleInfoPanel = (infoPanelCategory?: InfoPanel) => {
+  const toggleInfoPanel = (infoPanelCategory?: InfoPanelType) => {
     setInfoPanel(infoPanelCategory ? (infoPanelCategory === infoPanel ? null : infoPanelCategory) : null);
+
+    if (infoPanelCategory === "events" || infoPanelCategory === "warns" || infoPanelCategory === "errors"){
+      clearUnseen(infoPanelCategory.slice(0, infoPanelCategory.length-1) as LogType);
+    }
   };
 
   const toggleKakeraForToken = (token: string, kakera: KAKERA) => {
@@ -142,6 +127,12 @@ function App() {
     preferences.kakera.perToken.set(token, kakeras);
 
     setPreferences({ ...preferences });
+  };
+
+  const clearUnseen = (logType: LogType) => {
+    unseen[logType] = 0;
+    setUnseen({...unseen});
+    chrome.runtime.sendMessage({id: MESSAGES.APP.CLEAR_UNSEEN, data: logType});
   };
 
   const getCantRunReason = (): string => {
@@ -214,7 +205,7 @@ function App() {
 
         setBotState("setup");
 
-        const sent = sendMessage(MESSAGES.INJECTION, JSON.stringify(preferences, jsonMapSetReplacer), (err?: Error) => {
+        const sent = sendMessage(MESSAGES.APP.INJECTION, JSON.stringify(preferences, jsonMapSetReplacer), (err?: Error) => {
           if (err) {
             setDynamicCantRunReason(err.message);
             setBotState("injection_error");
@@ -226,7 +217,7 @@ function App() {
 
         if (!sent) throw Error("Couldn't find Discord ID. Refresh the page");
       } else if (botState === "running" || botState === "idle") {
-        const sent = sendMessage(MESSAGES.TOGGLE, null, (response?: Error | BotState) => {
+        const sent = sendMessage(MESSAGES.APP.TOGGLE, null, (response?: Error | BotState) => {
           if (response && !(response instanceof Error)) {
             setBotState(response);
             return;
@@ -258,6 +249,14 @@ function App() {
       .catch(console.error)
       .finally(() => setHasLoadedPreferences(true));
 
+    chrome?.runtime?.sendMessage({ id: MESSAGES.APP.GET_EVERYTHING }, (data?: { status: any, stats: Stats, logs: Logs, unseen: Unseen }) => {
+      if (data) {
+        setStats(data.stats)
+        setLogs(data.logs);
+        setUnseen(data.unseen)
+      }
+    });
+
     chrome?.tabs?.query({ url: "https://discord.com/channels/*", highlighted: true, currentWindow: true, status: "complete" })
       .then((tabs) => {
         if (tabs.length < 1) return;
@@ -268,7 +267,7 @@ function App() {
 
         setDiscordTab(tab);
 
-        chrome.tabs.sendMessage(tab.id, { id: MESSAGES.GET_STATE }, (state: BotState) => {
+        chrome.tabs.sendMessage(tab.id, { id: MESSAGES.APP.GET_STATE }, (state: BotState) => {
           if (!Object.hasOwn(BOT_STATES, state)) return;
 
           setBotState(state)
@@ -284,9 +283,9 @@ function App() {
     if (!hasLoadedPreferences) return;
 
     sendMessage(
-      MESSAGES.SYNC_PREFERENCES,
+      MESSAGES.APP.SYNC_PREFERENCES,
       JSON.stringify(preferences, jsonMapSetReplacer),
-      (err?: Error) => console.error(err)
+      (err?: Error) => {if (err) console.error(err)}
     );
 
     chrome?.storage?.local.set({
@@ -300,29 +299,24 @@ function App() {
       {
         infoPanel !== null &&
         <div id="info-panel-wrapper">
-          <section id="info-panel">
-            <h1>{infoPanel}</h1>
-            {Array(15).fill("A").map(item =>
-              <span>{item}</span>
-            )}
-          </section>
+          <InfoPanel infoType={infoPanel} logs={logs}/>
         </div>
       }
       <main>
         <section id="middle-menu">
-          {
-            discordTab && (botState === "idle" || botState === "running") &&
-            <div className="info-button summary" data-tooltip="Summary" onClick={() => toggleInfoPanel("summary")}>
-              {SVGS.STACK}
-            </div>
-          }
-          <div className="info-button events" data-tooltip="Events" data-notifications-count="3" onClick={() => toggleInfoPanel("events")}>
+          <div className="info-button status" data-tooltip="Status" onClick={() => toggleInfoPanel("status")}>
+            {SVGS.PERSON}
+          </div>
+          <div className="info-button stats" data-tooltip="Stats" onClick={() => toggleInfoPanel("stats")}>
             {SVGS.LIST_CHECKED}
           </div>
-          <div className="info-button warns" data-tooltip="Warns" onClick={() => toggleInfoPanel("warns")}>
+          <div className="info-button events" data-tooltip="Events" data-notifications-count={unseen.event || null} onClick={() => toggleInfoPanel("events")}>
+            {SVGS.STACK}
+          </div>
+          <div className="info-button warns" data-tooltip="Warns" data-notifications-count={unseen.warn || null} onClick={() => toggleInfoPanel("warns")}>
             {SVGS.EXCLAMATION}
           </div>
-          <div className="info-button errors" data-tooltip="Errors" data-notifications-count="2" onClick={() => toggleInfoPanel("errors")}>
+          <div className="info-button errors" data-tooltip="Errors" data-notifications-count={unseen.error || null} onClick={() => toggleInfoPanel("errors")}>
             {SVGS.EXCLAMATION}
           </div>
         </section>

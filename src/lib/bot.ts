@@ -1,3 +1,4 @@
+import type { BotEvent } from "./events";
 import { EMOJIS } from "./consts";
 import { INTERVAL_SEND_MESSAGE, MUDAE_USER_ID, SLASH_COMMANDS } from "./consts";
 import { SVGS } from "./svgs";
@@ -54,11 +55,18 @@ export interface BotManager {
     setup(): Promise<void>
     toggle(): void
     think(): void
+    error(message: string): void
     handleHourlyReset(): void
     handleNewChatAppend(nodes: NodeList): void
     getUserWithCriteria(cb: (user: BotUser) => boolean): BotUser | undefined
 
-    Message: {
+    log: {
+        warn(message: string): void
+        error(message: string, isCritical: boolean): void
+        event(eventType: BotEvent, content: any): void
+    }
+
+    message: {
         getId: ($message: HTMLElement) => string
         getAuthorId: ($message: HTMLElement) => string | undefined
         isFromMudae: ($message: HTMLElement) => boolean
@@ -241,14 +249,14 @@ export class BotUser {
             const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
 
             if (!channelId) {
-                resolve(Error("Couldn't send channel message: unknown channel ID"));
+                resolve(Error("Unknown channel ID"));
                 return;
             }
 
             const now = performance.now();
 
             if (now - this.manager.cdSendMessage < INTERVAL_SEND_MESSAGE) {
-                resolve(Error("Couldn't send channel message: cooldown"));
+                resolve(Error("Cooldown"));
                 return;
             }
 
@@ -271,15 +279,15 @@ export class BotUser {
     async reactToMessage($message: HTMLElement, emoji?: string): Promise<Error | void> {
         return new Promise<Error | void>((resolve) => {
             const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
-            const messageId = this.manager.Message.getId($message);
+            const messageId = this.manager.message.getId($message);
 
             if (!channelId) {
-                resolve(Error("Couldn't react to message: unknown channel ID"));
+                resolve(Error("Unknown channel ID"));
                 return;
             }
 
             if (!messageId) {
-                resolve(Error("Couldn't react to message: unknown message ID"));
+                resolve(Error("Unknown message ID"));
                 return;
             }
 
@@ -299,7 +307,7 @@ export class BotUser {
     async roll(): Promise<Error | void> {
         return new Promise((resolve) => {
             if (!this.manager.preferences) {
-                resolve(Error("Couldn't roll: unknown preferences."));
+                resolve(Error("Unknown preferences."));
                 return;
             }
 
@@ -307,7 +315,7 @@ export class BotUser {
             const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
 
             if (!guildId || !channelId) {
-                resolve(Error("Couldn't roll: unknown guild or channel ID."));
+                resolve(Error("Unknown guild or channel ID."));
                 return;
             }
 
@@ -334,5 +342,27 @@ export class BotUser {
             user.sendChannelMessage("$tu");
         }, ms, this);
     }
-}
+};
 
+export const defaultPreferences = (): Preferences => ({
+    useUsers: "logged",
+    tokenList: new Set(),
+    languague: "en",
+    notifications: {
+        type: "sound",
+        enabled: new Set()
+    },
+    roll: {
+        enabled: true,
+        type: "wx"
+    },
+    claim: {
+        delay: 0,
+        delayRandom: false
+    },
+    kakera: {
+        delay: 0,
+        delayRandom: false,
+        perToken: new Map([["all", new Set()]])
+    }
+});

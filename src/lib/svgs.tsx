@@ -8,6 +8,7 @@ import { ReactComponent as SVG_EXCLAMATION_DIAMOND } from "../svg/exclamation_di
 import { ReactComponent as SVG_EXCLAMATION } from "../svg/exclamation.svg"
 import { ReactComponent as SVG_LIST_CHECKED } from "../svg/list_checked.svg"
 import { ReactComponent as SVG_STACK } from "../svg/stack.svg"
+import { ReactComponent as SVG_PERSON } from "../svg/person.svg"
 
 export const SVGS = {
     PAUSE_FILL: <SVG_PAUSE_FILL/>,
@@ -19,5 +20,6 @@ export const SVGS = {
     EXCLAMATION_DIAMOND: <SVG_EXCLAMATION_DIAMOND/>,
     EXCLAMATION: <SVG_EXCLAMATION/>,
     LIST_CHECKED: <SVG_LIST_CHECKED/>,
-    STACK: <SVG_STACK/>
+    STACK: <SVG_STACK/>,
+    PERSON: <SVG_PERSON/>
 } as const;

@@ -32,3 +32,5 @@ export const minifyToken = (token: string) => token.slice(0, 7) + "..." + token.
 export const randomFloat = (min: number, max: number, decimals: number) => parseFloat((Math.random() * (max - min) + min).toFixed(decimals));
 
 export const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
+
+export const dateToHMS = (date: Date) => date.toUTCString().split(" ")[4];
