@@ -162,7 +162,25 @@ const bot: BotManager = {
             }
 
             return null;
-        }
+        },
+        async getInteractionUserId($message) {
+            const $avatar = $message.querySelector("img[class^='executedCommandAvatar']") as HTMLImageElement | null;
+
+            if ($avatar) {
+                const match = /avatars\/(\d+)\//.exec($avatar.src);
+
+                if (match) return match[1];
+            }
+
+            const messageId = this.getId($message);
+            const message = await this.get(messageId);
+
+            if (!message) return null;
+
+            const userId = message.interaction?.user.id;
+
+            return userId || null;
+        },
     },
 
     timers: {
@@ -616,23 +634,16 @@ const bot: BotManager = {
                 if (isCharacterLookupMessage) return;
 
                 const characterName = ($msg.querySelector("span[class^='embedAuthorName']") as HTMLElement | null)?.innerText;
-                const $replyAvatar = $msg.querySelector("img[class^='executedCommandAvatar']") as HTMLImageElement | null;
-                let replyUserId: string | undefined;
 
                 if (!characterName) {
                     bot.log.error("Couldn't get character name from message [?]", false); //# Add reference to message
                     return;
                 }
 
-                if ($replyAvatar) {
-                    replyUserId = /avatars\/(\d+)\//.exec($replyAvatar.src)?.[1];
+                const interactionUserId = await bot.message.getInteractionUserId($msg);
 
-                    if (!replyUserId) {
-                        bot.log.error("Couldn't identify user ID of this message [?]", false); // Add reference to message
-                        return;
-                    }
-
-                    const user = bot.getUserWithCriteria((user) => user.id === replyUserId);
+                if (interactionUserId) {
+                    const user = bot.getUserWithCriteria(user => user.id === interactionUserId);
 
                     if (user) {
                         const rollsLeft = (user.info.get(USER_INFO.ROLLS_LEFT) as number) - 1;
@@ -684,7 +695,7 @@ const bot: BotManager = {
 
                             const isProtected = !!$msg.querySelector("img[alt=':wishprotect:']");
 
-                            if (!isProtected || (isProtected && marriageableUser.id === replyUserId)) {
+                            if (!isProtected || (interactionUserId && marriageableUser.id === interactionUserId)) {
                                 setTimeout(() => {
                                     marriageableUser.reactToMessage($msg)
                                         .catch(err => bot.log.error(`User ${marriageableUser.username} couldn't react to a message: ${err.message}`, false));

@@ -76,6 +76,7 @@ export interface BotManager {
         getAuthorId: ($message: HTMLElement) => Promise<string | null>
         isFromMudae: ($message: HTMLElement) => Promise<boolean>
         getBotUserWhoSent: ($message: HTMLElement) => Promise<BotUser | null>
+        getInteractionUserId: ($message: HTMLElement) => Promise<string | null>
     }
 
     timers: {
