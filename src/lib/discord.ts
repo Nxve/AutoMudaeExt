@@ -1,30 +1,35 @@
 export interface DiscordMessage {
-    application_id: string
-    attachments: unknown[]
+    id: string
     author: DiscordUser
     channel_id: string
-    components: DiscordMessageComponentWrapper[]
     content: string
-    edited_timestamp: unknown | null
+    timestamp: string
+    edited_timestamp: string | null
+    attachments: unknown[]
+    components: DiscordMessageComponentWrapper[]
     embeds: DiscordEmbed[]
     flags: number
-    id: string
-    interaction: DiscordInteraction
     mention_everyone: boolean
-    mention_roles: unknown[]
-    mentions: unknown[]
+    mention_roles: string[]
+    mentions: DiscordUser[]
     pinned: boolean
-    timestamp: string
     tts: boolean
     type: number
-    webhook_id: string
+    application_id?: string
+    interaction?: DiscordInteraction
+    webhook_id?: string
+    message_reference?: {
+        channel_id: string
+        guild_id: string
+        message_id: string
+    }
 }
 
 export interface DiscordUser {
     id: string
     username: string
-    avatar: string
-    avatar_decoration: unknown
+    avatar: string | null
+    avatar_decoration: unknown | null
     discriminator: string
     display_name: string | null
     global_name: string | null
