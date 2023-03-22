@@ -51,15 +51,15 @@ export interface BotManager {
 
     hasNeededInfo(): boolean
     isLastReset(): boolean
-    mudaeTimeToMs(time: string): number | undefined
-    getMarriageableUser(preferableUserNicknames?: string[]): BotUser | undefined
+    mudaeTimeToMs(time: string): number | null
+    getMarriageableUser(preferableUserNicknames?: string[]): BotUser | null
     setup(): Promise<void>
     toggle(): void
     think(): void
     error(message: string): void
     handleHourlyReset(): void
     handleNewChatAppend(nodes: NodeList): void
-    getUserWithCriteria(cb: (user: BotUser) => boolean): BotUser | undefined
+    getUserWithCriteria(cb: (user: BotUser) => boolean): BotUser | null
 
     log: {
         warn(message: string): void

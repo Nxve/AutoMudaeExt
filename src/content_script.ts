@@ -206,7 +206,7 @@ const bot: BotManager = {
 
         const match = /(\d+h)?\s?(\d+)?/.exec(time);
 
-        if (!match) return;
+        if (!match) return null;
 
         const h = match[1], m = match[2];
 
@@ -228,7 +228,7 @@ const bot: BotManager = {
         for (const user of this.users) {
             if (!user.nick) {
                 this.error(`Couldn't get nickname for ${user.username ? ("user " + user.username) : ("token " + user.token)}`);
-                return;
+                return null;
             }
 
             if (user.info.get(USER_INFO.CAN_MARRY)) {
@@ -238,13 +238,14 @@ const bot: BotManager = {
             }
         }
 
-        return marriageableUser;
+        return marriageableUser || null;
     },
 
     getUserWithCriteria(cb) {
         for (const user of this.users) {
             if (cb(user)) return user;
         }
+        return null;
     },
 
     async setup() {
