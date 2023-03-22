@@ -4,6 +4,7 @@ import { INTERVAL_SEND_MESSAGE, MUDAE_USER_ID, SLASH_COMMANDS } from "./consts";
 import { SVGS } from "./svgs";
 import { KAKERAS } from "./mudae";
 import { minifyToken, pickRandom } from "./utils";
+import type { DiscordMessage } from "./discord";
 
 export type PrefUseUsers = "logged" | "tokenlist";
 export type PrefRollType = "wx" | "wa" | "wg" | "hx" | "ha" | "hg";
@@ -44,7 +45,7 @@ export interface BotManager {
     cdGatherInfo: number
     cdRoll: number
     nonce: number
-    lastMessageTime: number
+    lastSeenMessageTime: number
     lastResetHash: string
     chatObserver: MutationObserver
 
@@ -67,10 +68,14 @@ export interface BotManager {
     }
 
     message: {
+        _DiscordMessageCache: Map<string, DiscordMessage | null>
+        _MessageAuthorCache: Map<HTMLElement, string | null>
+        _fetch: (messageId: string) => Promise<DiscordMessage | null>
+        get: (messageId: string) => Promise<DiscordMessage | null>
         getId: ($message: HTMLElement) => string
-        getAuthorId: ($message: HTMLElement) => string | undefined
-        isFromMudae: ($message: HTMLElement) => boolean
-        getUserWhoSent: ($message: HTMLElement) => BotUser | undefined
+        getAuthorId: ($message: HTMLElement) => Promise<string | null>
+        isFromMudae: ($message: HTMLElement) => Promise<boolean>
+        getBotUserWhoSent: ($message: HTMLElement) => Promise<BotUser | null>
     }
 
     timers: {

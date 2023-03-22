@@ -8,6 +8,7 @@ import { MESSAGES } from "./lib/messaging";
 import { KAKERAS } from "./lib/mudae";
 import { getLastFromArray, jsonMapSetReviver, randomFloat } from "./lib/utils";
 import { EVENTS } from "./lib/events";
+import type { DiscordMessage } from "./lib/discord";
 
 const bot: BotManager = {
     state: "waiting_injection",
@@ -18,7 +19,7 @@ const bot: BotManager = {
     cdSendMessage: 0,
     cdGatherInfo: 0,
     cdRoll: 0,
-    lastMessageTime: 0,
+    lastSeenMessageTime: 0,
     lastResetHash: "",
     nonce: Math.floor(Math.random() * 1000000),
     chatObserver: new MutationObserver(ms => ms.forEach(m => { if (m.addedNodes.length) { bot.handleNewChatAppend(m.addedNodes) } })),
@@ -36,44 +37,131 @@ const bot: BotManager = {
     },
 
     message: {
+        _DiscordMessageCache: new Map(),
+        _MessageAuthorCache: new Map(),
+        _fetch(messageId) {
+            return new Promise((resolve, reject) => {
+                if (!bot.info.has("channel_id")) {
+                    reject("Unknown channel ID.");
+                    return;
+                }
+
+                const channelId = bot.info.get("channel_id") as string;
+
+                fetch(`https://discord.com/api/v9/channels/${channelId}/messages?limit=1&around=${messageId}`, {
+                    "headers": {
+                        "authorization": "NzAyNjk5NTExMTU5NzE4MDAx.Gvsk79.o0Cm36l4IOj5vKqN2zV0y8XNzRWuB8mA7glprU"
+                    }
+                })
+                    .then(r => r.json())
+                    .then(r => {
+                        if (!Array.isArray(r)) {
+                            reject("Invalid response from Discord API.");
+                            return;
+                        }
+
+                        if (r.length < 1) {
+                            resolve(null);
+                            return;
+                        }
+
+                        resolve(r[0] as DiscordMessage);
+                    })
+                    .catch(reject);
+            });
+        },
+        get(messageId) {
+            return new Promise((resolve, reject) => {
+                if (this._DiscordMessageCache.has(messageId)) {
+                    resolve(this._DiscordMessageCache.get(messageId) as DiscordMessage);
+                    return;
+                }
+
+                this._fetch(messageId)
+                    .then(msg => {
+                        this._DiscordMessageCache.set(messageId, msg);
+                        resolve(msg);
+                    })
+                    .catch(reject);
+            });
+        },
         getId($message) {
             return getLastFromArray($message.id.split("-"));
         },
         getAuthorId($message) {
-            let $targetMessage = $message;
-            let $avatar: HTMLImageElement | undefined;
-
-            while (!$avatar) {
-                $avatar = $targetMessage.querySelector("img[class^='avatar']") as HTMLImageElement;
-                if ($avatar) break;
-
-                if ($targetMessage.previousElementSibling) {
-                    $targetMessage = $targetMessage.previousElementSibling as HTMLElement;
+            return new Promise((resolve, reject) => {
+                if (this._MessageAuthorCache.has($message)) {
+                    resolve(this._MessageAuthorCache.get($message) as string | null);
+                    return;
                 }
 
-                while ($targetMessage && $targetMessage.tagName !== "LI") {
+                let $targetMessage = $message;
+                let $avatar: HTMLImageElement | null | undefined;
+
+                while (!$avatar) {
+                    $avatar = $targetMessage.querySelector("img[class^='avatar']") as HTMLImageElement | null;
+                    if ($avatar) break;
+
+                    /// This message is probably in a sequence of messages from the same person
+                    /// So it seeks for the previous messages with an avatar
                     if ($targetMessage.previousElementSibling) {
                         $targetMessage = $targetMessage.previousElementSibling as HTMLElement;
                     }
+
+                    /// If it's not an `li`, it must be the red divisor of new messages, which would be an `div`
+                    /// It will keep seeking for previous elements until it reaches "old" messages, before the divisor
+                    while ($targetMessage && $targetMessage.tagName !== "LI") {
+                        if ($targetMessage.previousElementSibling) {
+                            $targetMessage = $targetMessage.previousElementSibling as HTMLElement;
+                        }
+                    }
+
+                    if (!$avatar && !$targetMessage) {
+                        /// No more messages to search for the avatar
+                        // bot.log.error("Couldn't get author ID from message [?]", false); //# Add reference to message
+                        break;
+                    }
                 }
 
-                if (!$avatar && !$targetMessage) {
-                    bot.log.error("Couldn't get author ID from message [?]", false); //# Add reference to message
-                    return;
+                if ($avatar) {
+                    const match = /avatars\/(\d+)\//.exec($avatar.src);
+
+                    if (match) return resolve(match[1]);
                 }
-            }
 
-            const match = /avatars\/(\d+)\//.exec($avatar.src);
+                /// Couldn't get avatar from messages, which would be really strange
+                /// Or it's from an user that has no custom avatar
+                /// Then it will try to fetch this message from Discord API to see it's author ID
 
-            if (match) return match[1];
+                const messageId = this.getId($message);
+
+                this.get(messageId)
+                    .then(msg => {
+                        if (!msg) {
+                            resolve(null);
+                            return;
+                        }
+
+                        resolve(msg.author.id);
+                    })
+                    .catch(reject);
+            });
         },
-        isFromMudae($message) {
-            return this.getAuthorId($message) === MUDAE_USER_ID;
+        async isFromMudae($message) {
+            const messageAuthorId = await this.getAuthorId($message);
+
+            return (messageAuthorId != null && messageAuthorId === MUDAE_USER_ID);
         },
-        getUserWhoSent($message) {
+        async getBotUserWhoSent($message) {
+            const messageAuthorId = await this.getAuthorId($message);
+
+            if (!messageAuthorId) return null;
+
             for (const user of bot.users) {
-                if (user.id === this.getAuthorId($message)) return user;
+                if (user.id === messageAuthorId) return user;
             }
+
+            return null;
         }
     },
 
@@ -288,7 +376,7 @@ const bot: BotManager = {
         const isRollEnabled = bot.preferences.roll.enabled;
 
         if (isRollEnabled) {
-            if (userWithRolls && now - bot.lastMessageTime > INTERVAL_ROLL && now - bot.cdRoll > (INTERVAL_ROLL * .5)) {
+            if (userWithRolls && now - bot.lastSeenMessageTime > INTERVAL_ROLL && now - bot.cdRoll > (INTERVAL_ROLL * .5)) {
                 userWithRolls.roll()
                     .catch(err => bot.log.error(`User ${userWithRolls.username} couldn't roll: ${err.message}`, false))
                 bot.cdRoll = now;
@@ -320,7 +408,7 @@ const bot: BotManager = {
     handleNewChatAppend(nodes) {
         document.querySelector("div[class^='scrollerSpacer']")?.scrollIntoView();
 
-        nodes.forEach(_node => {
+        nodes.forEach(async _node => {
             if (!bot.preferences) {
                 bot.error("Couldn't find preferences when handling new chat message.");
                 return;
@@ -329,9 +417,9 @@ const bot: BotManager = {
             const $msg = _node as HTMLElement;
 
             if ($msg.tagName !== "LI") return;
-            bot.lastMessageTime = performance.now();
+            bot.lastSeenMessageTime = performance.now();
 
-            if (!bot.message.isFromMudae($msg)) return;
+            if (!await bot.message.isFromMudae($msg)) return;
 
             const $previousElement = $msg.previousElementSibling
                 ? ($msg.previousElementSibling.id === "---new-messages-bar" ? $msg.previousElementSibling.previousElementSibling : $msg.previousElementSibling)
@@ -341,7 +429,7 @@ const bot: BotManager = {
             if ($previousElement) {
                 const $previousMessage = $previousElement as HTMLElement;
 
-                const user = bot.message.getUserWhoSent($previousMessage);
+                const user = await bot.message.getBotUserWhoSent($previousMessage);
 
                 if (user) {
                     const command = ($previousMessage.querySelector("div[id^='message-content']") as HTMLElement | null)?.innerText;
