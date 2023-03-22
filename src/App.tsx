@@ -4,7 +4,7 @@ import type { MessageID, Message } from "./lib/messaging";
 import type { Logs, Stats, Unseen, LogType } from "./lib/events";
 import type { InfoPanelType, MenuCategory, MenuSubcategory } from "./lib/app_types";
 import { blankLogs, blankStats, blankUnseen } from "./lib/events";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { isTokenValid, jsonMapSetReplacer, jsonMapSetReviver, minifyToken } from "./lib/utils";
 import { BOT_STATES, NOTIFICATIONS, defaultPreferences } from "./lib/bot";
 import { MESSAGES } from "./lib/messaging";
@@ -183,7 +183,7 @@ function App() {
     chrome.tabs.sendMessage<Message>(tabId, { id: messageId, data }, cb);
   };
 
-  const broadcastMessage = (messageId: MessageID, data: any, cb: (response?: any) => void) => {
+  const broadcastMessage = useCallback((messageId: MessageID, data: any, cb: (response?: any) => void) => {
     chrome?.tabs?.query({ url: "https://discord.com/channels/*", currentWindow: true, status: "complete" })
       .then((tabs) => {
         tabs.forEach(tab => {
@@ -191,7 +191,7 @@ function App() {
           sendTabMessage(tab.id, messageId, data, cb);
         });
       });
-  };
+  }, []);
 
   const sendWorkerMessage = (messageId: MessageID, data: any, cb?: (response?: any) => void) => {
     chrome?.runtime?.sendMessage<Message>({ id: messageId, data }, cb || (() => { }));
@@ -205,9 +205,9 @@ function App() {
 
       setBotState("setup");
 
-      sendTabMessage(discordTab, MESSAGES.APP.INJECTION, JSON.stringify(preferences, jsonMapSetReplacer), (err?: Error) => {
+      sendTabMessage(discordTab, MESSAGES.APP.INJECTION, JSON.stringify(preferences, jsonMapSetReplacer), (err?: string) => {
         if (err) {
-          setDynamicCantRunReason(err.message);
+          setDynamicCantRunReason(err);
           setBotState("injection_error");
           return;
         }
@@ -261,7 +261,7 @@ function App() {
 
         setDiscordTab(tab);
 
-        chrome.tabs.sendMessage(tab.id, { id: MESSAGES.APP.GET_STATE }, (state: BotState) => {
+        sendTabMessage(tab.id, MESSAGES.APP.GET_STATE, null, (state: BotState) => {
           if (!Object.hasOwn(BOT_STATES, state)) return;
 
           setBotState(state)
@@ -273,8 +273,7 @@ function App() {
   useEffect(() => {
     //# Use debounce here, so it doesn't spam messages and store process when
     //# the user is changing a range input or something
-
-    if (!hasLoadedPreferences) return;
+    if (!hasLoadedPreferences) return;   
 
     broadcastMessage(
       MESSAGES.APP.SYNC_PREFERENCES,
@@ -286,7 +285,7 @@ function App() {
       preferences: JSON.stringify(preferences, jsonMapSetReplacer)
     })
       .catch(console.error);
-  }, [preferences, hasLoadedPreferences]);
+  }, [preferences, hasLoadedPreferences, broadcastMessage]);
 
   return (
     <div id="app">

@@ -302,7 +302,6 @@ const bot: BotManager = {
                 bot.lastResetHash = currentResetHash;
 
                 //# if isRollEnabled auto-use $us or $rolls
-                //# notify about last reset can still marry
 
                 bot.log.warn("You have no more rolls, can still marry and it's the last reset.");
             }
@@ -717,7 +716,7 @@ const handleExtensionMessage = (message: Message, _sender: chrome.runtime.Messag
                 })
                 .catch((err: Error) => {
                     bot.state = "injection_error";
-                    sendResponse(err);
+                    sendResponse(err.message);
                 });
 
             /// Must return true here to keep it open waiting for async response
