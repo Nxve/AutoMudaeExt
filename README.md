@@ -6,15 +6,16 @@ It is still in early development, thus unavailable in webstore and not really fu
 You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
 #### Roadmap to get it working:
+- Replace every session_id with random generated 32 char strings
 - When getting state from a tab, get last error too
-- Notifications: Some of the events should trigger sound notifications
+- Notifications
+    - Some of the events should trigger sound notifications
 - Option to watch for mentioned nicknames: sniping
 - Add to total claimed kakera those received from EMERALD IV reward
-- Get guild config from `/server settings`
-- Remove the necessity of a custom avatar
-- Add other language support
+- Guild Config:
+    - Option to get from `/server settings`
+    - Add other language support
 - Version control over preferences
-    - Does Chrome handle this already?
 - Advise about it's requirements:
     - Maybe after installation, in a "guide" page
     - Requirements:
@@ -27,6 +28,7 @@ You can expect it to be available for use after the completion of the below road
     - Change checkboxes to Discord's toggle buttons
     - Change dropdowns to Discord's style
     - Add a fade out/in to scrollbar thumb when not active
+    - Highlight Discord messages when claiming characters/kakeras, when stolen, etc
 - Better logic/performance:
     - Handle hourly reset
     - Prevent tab from going inactive
@@ -35,8 +37,11 @@ You can expect it to be available for use after the completion of the below road
     - Maybe whole series too
 - Option to use $dk, $daily
 - Option to use $us, $rolls and $rt when needed
-- Wished characters maintenance: remove claimed wishes, wish from user configured list of interesting characters
-- Transfer characters between users
+- Account management:
+    - $givek: Transfer kakera between users
+    - $wp: Remove claimed wishes
+    - $wish: Wish from user configured list of interesting characters
+    - $give: Transfer characters between users
 - Portability to other browsers
 
 ###### Initial boilerplate was created following instructions from [this LogRocket post](https://blog.logrocket.com/creating-chrome-extension-react-typescript/)
