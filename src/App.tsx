@@ -261,10 +261,11 @@ function App() {
 
         setDiscordTab(tab);
 
-        sendTabMessage(tab.id, MESSAGES.APP.GET_STATE, null, (state: BotState) => {
-          if (!Object.hasOwn(BOT_STATES, state)) return;
+        sendTabMessage(tab.id, MESSAGES.APP.GET_STATE, null, (response: { state: BotState, lastError?: string }) => {
+          if (!Object.hasOwn(BOT_STATES, response.state)) return;
 
-          setBotState(state)
+          setBotState(response.state);
+          if (response.lastError) setDynamicCantRunReason(response.lastError);
         });
       })
       .catch(console.error)
@@ -273,7 +274,7 @@ function App() {
   useEffect(() => {
     //# Use debounce here, so it doesn't spam messages and store process when
     //# the user is changing a range input or something
-    if (!hasLoadedPreferences) return;   
+    if (!hasLoadedPreferences) return;
 
     broadcastMessage(
       MESSAGES.APP.SYNC_PREFERENCES,

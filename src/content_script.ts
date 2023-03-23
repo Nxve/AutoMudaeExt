@@ -193,6 +193,7 @@ const bot: BotManager = {
     error(message) {
         this.toggle();
         this.state = "error";
+        this.lastErrorMessage = message;
         this.log.error(message, true);
     },
 
@@ -274,7 +275,7 @@ const bot: BotManager = {
         }
 
         if (!guildId || !channelId) {
-            throw Error("Couldn't retrieve active guild or channel.");
+            throw Error("Couldn't retrieve active guild or channel ID.");
         }
 
         bot.info.set(DISCORD_INFO.CHANNEL_ID, channelId);
@@ -293,29 +294,32 @@ const bot: BotManager = {
                 await user.init();
                 bot.users.add(user);
             }
-        } else {
-            const storeUsers = JSON.parse(localStorage.MultiAccountStore)?._state.users;
-            const storeTokens = JSON.parse(localStorage.tokens);
 
-            if (!storeUsers || !storeTokens) {
-                throw Error("Couldn't retrieve information about logged users.");
-            }
-
-            for (const storeUser of storeUsers) {
-                const { id, username, avatar } = storeUser;
-
-                const token = storeTokens[id];
-
-                if (!token) {
-                    throw Error(`Couldn't retrieve user token for [${username}].`);
-                }
-
-                const user = new BotUser(bot, token, id, username, avatar);
-
-                await user.init();
-                bot.users.add(user);
-            }
+            return;
         }
+
+        const storeUsers = JSON.parse(localStorage.MultiAccountStore)?._state.users;
+        const storeTokens = JSON.parse(localStorage.tokens);
+
+        if (!storeUsers || !storeTokens) {
+            throw Error("Couldn't retrieve information about logged users.");
+        }
+
+        for (const storeUser of storeUsers) {
+            const { id, username, avatar } = storeUser;
+
+            const token = storeTokens[id];
+
+            if (!token) {
+                throw Error(`Couldn't retrieve user token for [${username}].`);
+            }
+
+            const user = new BotUser(bot, token, id, username, avatar);
+
+            await user.init();
+            bot.users.add(user);
+        }
+
     },
 
     toggle() {
@@ -779,7 +783,7 @@ const handleExtensionMessage = (message: Message, _sender: chrome.runtime.Messag
 
     switch (message.id) {
         case MESSAGES.APP.GET_STATE:
-            sendResponse(bot.state);
+            sendResponse({ state: bot.state, lastError: bot.lastErrorMessage });
             break;
         case MESSAGES.APP.INJECTION:
             bot.preferences = JSON.parse(message.data, jsonMapSetReviver);
@@ -797,6 +801,7 @@ const handleExtensionMessage = (message: Message, _sender: chrome.runtime.Messag
                 })
                 .catch((err: Error) => {
                     bot.state = "injection_error";
+                    bot.lastErrorMessage = err.message;
                     sendResponse(err.message);
                 });
 

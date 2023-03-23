@@ -48,6 +48,7 @@ export interface BotManager {
     lastSeenMessageTime: number
     lastResetHash: string
     chatObserver: MutationObserver
+    lastErrorMessage?: string
 
     hasNeededInfo(): boolean
     isLastReset(): boolean
