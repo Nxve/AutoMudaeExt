@@ -188,98 +188,94 @@ export class BotUser {
         }
     }
 
-    async init(): Promise<Error | void> {
-        return new Promise<Error | void>(async (resolve) => {
-            if (this.id && this.username && this.avatar) {
-                const err = await this.fetchNick();
+    async init(): Promise<void> {
+        if (this.id && this.username && this.avatar) {
+            await this.fetchNick();
+            return;
+        }
 
-                resolve(err);
-                return;
-            }
+        let userData: any;
+        const minifiedToken = minifyToken(this.token);
 
-            fetch("https://discord.com/api/v9/users/@me", { "headers": { "authorization": this.token } })
-                .then(response => response.json())
-                .then(async (data) => {
-                    const minifiedToken = minifyToken(this.token);
+        try {
+            const response = await fetch("https://discord.com/api/v9/users/@me", { "headers": { "authorization": this.token } })
 
-                    if (!Object.hasOwn(data, "id") || !Object.hasOwn(data, "username") || !Object.hasOwn(data, "avatar")) {
-                        throw Error(`Couldn't retrieve info about the token [${minifiedToken}]`);
-                    }
+            userData = await response.json();
+        } catch (error) {
+            console.error(`Error while fetching user data for token [${minifiedToken}]`, error);
+            throw Error(`Couldn't retrieve info about the token [${minifiedToken}]. Check console for more info`);
+        }
 
-                    this.id = data.id;
-                    this.username = data.username;
-                    this.avatar = data.avatar;
+        if (!Object.hasOwn(userData, "id") || !Object.hasOwn(userData, "username") || !Object.hasOwn(userData, "avatar")) {
+            throw Error(`Malformed response from Discord API for token [${minifiedToken}]`);
+        }
 
-                    if (this.avatar == null) {
-                        throw Error(`Token [${minifiedToken}] must have a custom avatar`);
-                    }
+        this.id = userData.id;
+        this.username = userData.username;
+        this.avatar = userData.avatar;
 
-                    const err = await this.fetchNick();
+        if (this.avatar == null) {
+            throw Error(`Token [${minifiedToken}] must have a custom avatar`);
+        }
 
-                    resolve(err);
-                })
-                .catch(resolve);
-        });
+        await this.fetchNick();
     }
 
-    async fetchNick(): Promise<Error | void> {
-        return new Promise<Error | void>(resolve => {
-            const guildId = window.location.pathname.split("/")[2];
+    async fetchNick(): Promise<void> {
+        const guildId = window.location.pathname.split("/")[2];
 
-            fetch(`https://discord.com/api/v9/users/${this.id}/profile?guild_id=${guildId}`, {
+        let userData: any;
+
+        try {
+            const response = await fetch(`https://discord.com/api/v9/users/${this.id}/profile?guild_id=${guildId}`, {
                 "headers": {
                     "authorization": this.token
                 }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (!Object.hasOwn(data, "guild_member")) {
-                        throw Error(`Token ${minifyToken(this.token)} must be a member of this guild`);
-                    }
+            });
 
-                    const { guild_member: { nick } } = data;
-                    this.nick = nick;
+            userData = await response.json();
+        } catch (error: any) {
+            throw Error(`Couldn't fetch user nick for token [${minifyToken(this.token)}]: ${error.message}`);
+        }
 
-                    resolve();
-                })
-                .catch(resolve);
-        });
+        if (!Object.hasOwn(userData, "guild_member")) {
+            throw Error(`Token [${minifyToken(this.token)}] must be a member of this guild`);
+        }
+
+        const { guild_member: { nick } } = userData;
+        this.nick = nick;
     }
 
     hasNeededInfo(): boolean {
         return NEEDED_USER_INFO.every(info => this.info.has(info), this);
     }
 
-    async sendChannelMessage(message: string): Promise<Error | void> {
-        return new Promise<Error | void>((resolve) => {
-            const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
+    async sendChannelMessage(message: string): Promise<void> {
+        const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
 
-            if (!channelId) {
-                resolve(Error("Unknown channel ID"));
-                return;
-            }
+        if (!channelId) throw Error("Unknown channel ID");
 
-            const now = performance.now();
+        const now = performance.now();
 
-            if (now - this.manager.cdSendMessage < INTERVAL_SEND_MESSAGE) {
-                resolve(Error("Cooldown"));
-                return;
-            }
+        if (now - this.manager.cdSendMessage < INTERVAL_SEND_MESSAGE) {
+            throw Error("Cooldown");
+        }
 
-            this.manager.cdSendMessage = now;
+        this.manager.cdSendMessage = now;
 
-            fetch(`https://discord.com/api/v9/channels/${channelId}/messages`, {
+        try {
+            await fetch(`https://discord.com/api/v9/channels/${channelId}/messages`, {
                 "method": "POST",
                 "headers": {
                     "authorization": this.token,
                     "content-type": "application/json"
                 },
                 "body": `{"content":"${message || '?'}","nonce":"${++this.manager.nonce}","tts":false}`
-            })
-                .then(() => resolve())
-                .catch(resolve);
-
-        })
+            });
+        } catch (error) {
+            console.error("Error while sending Discord message", error);
+            throw Error("Couldn't send a Discord message. Check console for more info.");
+        }
     }
 
     async pressMessageButton($message: HTMLElement): Promise<void> {
@@ -287,9 +283,9 @@ export class BotUser {
         const guildId = this.manager.info.get("guild_id") as string;
         const channelId = this.manager.info.get("channel_id") as string;
 
-        if (!messageId) throw Error("Couldn't identify message ID.");
-        if (!guildId) throw Error("Couldn't get the guild ID.");
-        if (!channelId) throw Error("Couldn't get the channel ID.");
+        if (!messageId) throw Error("Unknown message ID.");
+        if (!guildId) throw Error("Unknown guild ID.");
+        if (!channelId) throw Error("Unknown channel ID.");
 
         let message: DiscordMessage | null | undefined;
 
@@ -323,24 +319,25 @@ export class BotUser {
         }
     }
 
-    async roll(): Promise<Error | void> {
-        return new Promise((resolve) => {
-            if (!this.manager.preferences) {
-                resolve(Error("Unknown preferences."));
-                return;
-            }
+    async roll(): Promise<void> {
+        if (!this.manager.preferences) {
+            throw Error("Unknown preferences.")
+        }
 
-            const guildId = this.manager.info.get(DISCORD_INFO.GUILD_ID);
-            const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
+        const guildId = this.manager.info.get(DISCORD_INFO.GUILD_ID);
+        const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
 
-            if (!guildId || !channelId) {
-                resolve(Error("Unknown guild or channel ID."));
-                return;
-            }
+        if (!guildId) {
+            throw Error("Unknown guild ID.");
+        }
+        if (!channelId) {
+            throw Error("Unknown channel ID.");
+        }
 
-            const rollType = this.manager.preferences.roll.type;
-            const command = SLASH_COMMANDS[rollType];
+        const rollType = this.manager.preferences.roll.type;
+        const command = SLASH_COMMANDS[rollType];
 
+        try {
             fetch("https://discord.com/api/v9/interactions", {
                 "method": "POST",
                 "headers": {
@@ -348,10 +345,11 @@ export class BotUser {
                     "content-type": "multipart/form-data; boundary=----BDR",
                 },
                 "body": `------BDR\r\nContent-Disposition: form-data; name="payload_json"\r\n\r\n{"type":2,"application_id":"${MUDAE_USER_ID}","guild_id":"${guildId}","channel_id":"${channelId}","session_id":"${++this.manager.nonce}","data":{"version":"${command.version}","id":"${command.id}","name":"${rollType}","type":1},"nonce":"${this.manager.nonce}"}\r\n------BDR--\r\n`
-            })
-                .then(() => resolve())
-                .catch(resolve);
-        });
+            });
+        } catch (error) {
+            console.error(error);            
+            throw Error("Couldn't send interaction request. Check console for more info.");
+        }
     }
 
     setTUTimer(ms: number) {

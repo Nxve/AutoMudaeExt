@@ -289,10 +289,7 @@ const bot: BotManager = {
             for (const token of bot.preferences.tokenList) {
                 const user = new BotUser(bot, token);
 
-                const initErr = await user.init();
-
-                if (initErr) throw initErr;
-
+                await user.init();
                 bot.users.add(user);
             }
         } else {
@@ -309,15 +306,12 @@ const bot: BotManager = {
                 const token = storeTokens[id];
 
                 if (!token) {
-                    throw Error(`Couldn't retrieve information about user [${username}].`);
+                    throw Error(`Couldn't retrieve user token for [${username}].`);
                 }
 
                 const user = new BotUser(bot, token, id, username, avatar);
 
-                const initErr = await user.init();
-
-                if (initErr) throw initErr;
-
+                await user.init();
                 bot.users.add(user);
             }
         }
@@ -733,18 +727,19 @@ const bot: BotManager = {
                                 if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
                                     let claimDelay = bot.preferences.kakera.delay;
 
+                                    const thisClaim = () => {
+                                        botUser.pressMessageButton($msg)
+                                        .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
+                                    };
+
                                     if (claimDelay > 0) {
                                         if (bot.preferences.kakera.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
 
-                                        setTimeout(() => {
-                                            botUser.pressMessageButton($msg)
-                                                .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
-                                        }, claimDelay * 1000);
+                                        setTimeout(() => thisClaim(), claimDelay * 1000);
                                         return;
                                     }
 
-                                    botUser.pressMessageButton($msg)
-                                        .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
+                                    thisClaim();
                                     return;
                                 }
                             }
