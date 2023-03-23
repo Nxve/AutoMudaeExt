@@ -1,9 +1,8 @@
 import type { BotEvent } from "./events";
-import { EMOJIS } from "./consts";
 import { INTERVAL_SEND_MESSAGE, MUDAE_USER_ID, SLASH_COMMANDS } from "./consts";
 import { SVGS } from "./svgs";
 import { KAKERAS } from "./mudae";
-import { minifyToken, pickRandom } from "./utils";
+import { minifyToken } from "./utils";
 import type { DiscordMessage } from "./discord";
 
 export type PrefUseUsers = "logged" | "tokenlist";
@@ -45,6 +44,7 @@ export interface BotManager {
     cdGatherInfo: number
     cdRoll: number
     nonce: number
+    sessionID: string
     lastSeenMessageTime: number
     lastResetHash: string
     chatObserver: MutationObserver
@@ -258,7 +258,7 @@ export class BotUser {
         const now = performance.now();
 
         if (now - this.manager.cdSendMessage < INTERVAL_SEND_MESSAGE) {
-            throw Error("Cooldown");
+            return; /// Silent failure. Throwing it would log as an error.
         }
 
         this.manager.cdSendMessage = now;
@@ -310,7 +310,7 @@ export class BotUser {
                     "authorization": this.token,
                     "content-type": "application/json"
                 },
-                "body": `{"type":3,"nonce":"${++this.manager.nonce}","guild_id":"${guildId}","channel_id":"${channelId}","message_flags":0,"message_id":"${messageId}","application_id":"${MUDAE_USER_ID}","session_id":"ccce365535f64418875c23f8eafb9f26","data":{"component_type":${component.type},"custom_id":"${component.custom_id}"}}`,
+                "body": `{"type":3,"nonce":"${++this.manager.nonce}","guild_id":"${guildId}","channel_id":"${channelId}","message_flags":0,"message_id":"${messageId}","application_id":"${MUDAE_USER_ID}","session_id":"${this.manager.sessionID}","data":{"component_type":${component.type},"custom_id":"${component.custom_id}"}}`,
                 "method": "POST"
             });
         } catch (error) {
@@ -344,10 +344,10 @@ export class BotUser {
                     "authorization": this.token,
                     "content-type": "multipart/form-data; boundary=----BDR",
                 },
-                "body": `------BDR\r\nContent-Disposition: form-data; name="payload_json"\r\n\r\n{"type":2,"application_id":"${MUDAE_USER_ID}","guild_id":"${guildId}","channel_id":"${channelId}","session_id":"${++this.manager.nonce}","data":{"version":"${command.version}","id":"${command.id}","name":"${rollType}","type":1},"nonce":"${this.manager.nonce}"}\r\n------BDR--\r\n`
+                "body": `------BDR\r\nContent-Disposition: form-data; name="payload_json"\r\n\r\n{"type":2,"application_id":"${MUDAE_USER_ID}","guild_id":"${guildId}","channel_id":"${channelId}","session_id":"${this.manager.sessionID}","data":{"version":"${command.version}","id":"${command.id}","name":"${rollType}","type":1},"nonce":"${++this.manager.nonce}"}\r\n------BDR--\r\n`
             });
         } catch (error) {
-            console.error(error);            
+            console.error(error);
             throw Error("Couldn't send interaction request. Check console for more info.");
         }
     }

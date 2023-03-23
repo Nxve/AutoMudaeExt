@@ -3,10 +3,10 @@ import type { Message } from "./lib/messaging";
 import type { KAKERA } from "./lib/mudae";
 import { DISCORD_INFO } from "./lib/bot";
 import { BotUser, USER_INFO } from "./lib/bot";
-import { INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID } from "./lib/consts";
+import { INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID, INTERVAL_DONT_ROLL_AFTER_ACTIVITY } from "./lib/consts";
 import { MESSAGES } from "./lib/messaging";
 import { KAKERAS } from "./lib/mudae";
-import { getLastFromArray, jsonMapSetReviver, randomFloat } from "./lib/utils";
+import { getLastFromArray, jsonMapSetReviver, randomFloat, randomSessionID } from "./lib/utils";
 import { EVENTS } from "./lib/events";
 import type { DiscordMessage } from "./lib/discord";
 
@@ -22,6 +22,7 @@ const bot: BotManager = {
     lastSeenMessageTime: 0,
     lastResetHash: "",
     nonce: Math.floor(Math.random() * 1000000),
+    sessionID: randomSessionID(),
     chatObserver: new MutationObserver(ms => ms.forEach(m => { if (m.addedNodes.length) { bot.handleNewChatAppend(m.addedNodes) } })),
 
     log: {
@@ -377,7 +378,7 @@ const bot: BotManager = {
         const isRollEnabled = bot.preferences.roll.enabled;
 
         if (isRollEnabled) {
-            if (userWithRolls && now - bot.lastSeenMessageTime > INTERVAL_ROLL && now - bot.cdRoll > (INTERVAL_ROLL * .5)) {
+            if (userWithRolls && now - bot.lastSeenMessageTime > INTERVAL_DONT_ROLL_AFTER_ACTIVITY && now - bot.cdRoll > INTERVAL_ROLL) {
                 userWithRolls.roll()
                     .catch(err => bot.log.error(`User ${userWithRolls.username} couldn't roll: ${err.message}`, false))
                 bot.cdRoll = now;
@@ -729,7 +730,7 @@ const bot: BotManager = {
 
                                     const thisClaim = () => {
                                         botUser.pressMessageButton($msg)
-                                        .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
+                                            .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
                                     };
 
                                     if (claimDelay > 0) {

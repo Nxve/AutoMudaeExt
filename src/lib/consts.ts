@@ -1,7 +1,8 @@
 export const MUDAE_USER_ID = "432610292342587392";
 export const INTERVAL_SEND_MESSAGE = 1500;
 export const INTERVAL_THINK = 200;
-export const INTERVAL_ROLL = 2000;
+export const INTERVAL_ROLL = 1500;
+export const INTERVAL_DONT_ROLL_AFTER_ACTIVITY = 2000;
 
 export const EMOJIS = {
     '💓': '%F0%9F%92%93',
