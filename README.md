@@ -7,6 +7,7 @@ You can expect it to be available for use after the completion of the below road
 
 #### Roadmap to get it working:
 - Replace every session_id with random generated 32 char strings
+- Status & Stats
 - When getting state from a tab, get last error too
 - Notifications
     - Some of the events should trigger sound notifications
