@@ -71,7 +71,7 @@ export interface BotManager {
         _DiscordMessageCache: Map<string, DiscordMessage | null>
         _MessageAuthorCache: Map<HTMLElement, string | null>
         _fetch: (messageId: string) => Promise<DiscordMessage | null>
-        get: (messageId: string) => Promise<DiscordMessage | null>
+        get: (message: string | HTMLElement) => Promise<DiscordMessage | null>
         getId: ($message: HTMLElement) => string
         getAuthorId: ($message: HTMLElement) => Promise<string | null>
         isFromMudae: ($message: HTMLElement) => Promise<boolean>
@@ -282,32 +282,45 @@ export class BotUser {
         })
     }
 
-    async reactToMessage($message: HTMLElement, emoji?: string): Promise<Error | void> {
-        return new Promise<Error | void>((resolve) => {
-            const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
-            const messageId = this.manager.message.getId($message);
+    async pressMessageButton($message: HTMLElement): Promise<void> {
+        const messageId = this.manager.message.getId($message);
+        const guildId = this.manager.info.get("guild_id") as string;
+        const channelId = this.manager.info.get("channel_id") as string;
 
-            if (!channelId) {
-                resolve(Error("Unknown channel ID"));
-                return;
-            }
+        if (!messageId) throw Error("Couldn't identify message ID.");
+        if (!guildId) throw Error("Couldn't get the guild ID.");
+        if (!channelId) throw Error("Couldn't get the channel ID.");
 
-            if (!messageId) {
-                resolve(Error("Unknown message ID"));
-                return;
-            }
+        let message: DiscordMessage | null | undefined;
 
-            emoji = emoji || pickRandom([...Object.values(EMOJIS)]);
+        try {
+            message = await this.manager.message.get(messageId);
+        } catch (error) {
+            console.error("Error while fetching discord message", $message, error);
+            throw Error("Couldn't fetch the Discord message. Check console for more info.");
+        }
 
-            fetch(`https://discord.com/api/v9/channels/${channelId}/messages/${messageId}/reactions/${emoji}/%40me`, {
-                "method": "PUT",
+        if (!message) throw Error("Couldn't fetch the Discord message.");
+
+        const componentWrapper = message.components[0];
+
+        if (!componentWrapper || componentWrapper.components.length < 1) throw Error("No button was found to press.");
+
+        const component = componentWrapper.components[0];
+
+        try {
+            await fetch("https://discord.com/api/v9/interactions", {
                 "headers": {
                     "authorization": this.token,
-                }
-            })
-                .then(() => resolve())
-                .catch(resolve);
-        });
+                    "content-type": "application/json"
+                },
+                "body": `{"type":3,"nonce":"${++this.manager.nonce}","guild_id":"${guildId}","channel_id":"${channelId}","message_flags":0,"message_id":"${messageId}","application_id":"${MUDAE_USER_ID}","session_id":"ccce365535f64418875c23f8eafb9f26","data":{"component_type":${component.type},"custom_id":"${component.custom_id}"}}`,
+                "method": "POST"
+            });
+        } catch (error) {
+            console.error("Error while interacting with Discord message button", $message, error);
+            throw Error("Couldn't interact with the button. Check console for more info.");
+        }
     }
 
     async roll(): Promise<Error | void> {

@@ -47,10 +47,11 @@ const bot: BotManager = {
                 }
 
                 const channelId = bot.info.get("channel_id") as string;
+                const [firstUser] = bot.users;
 
                 fetch(`https://discord.com/api/v9/channels/${channelId}/messages?limit=1&around=${messageId}`, {
                     "headers": {
-                        "authorization": "NzAyNjk5NTExMTU5NzE4MDAx.Gvsk79.o0Cm36l4IOj5vKqN2zV0y8XNzRWuB8mA7glprU"
+                        "authorization": firstUser.token
                     }
                 })
                     .then(r => r.json())
@@ -70,15 +71,17 @@ const bot: BotManager = {
                     .catch(reject);
             });
         },
-        async get(messageId) {
+        async get(message) {
+            const messageId = typeof message === "string" ? message : this.getId(message);
+
             if (this._DiscordMessageCache.has(messageId)) {
                 return this._DiscordMessageCache.get(messageId) as DiscordMessage;
             }
 
-            const message = await this._fetch(messageId);
-            this._DiscordMessageCache.set(messageId, message);
+            const msg = await this._fetch(messageId);
+            this._DiscordMessageCache.set(messageId, msg);
 
-            return message;
+            return msg;
         },
         getId($message) {
             return getLastFromArray($message.id.split("-"));
@@ -126,9 +129,7 @@ const bot: BotManager = {
             /// Or it's from an user that has no custom avatar
             /// Then it will try to fetch this message from Discord API to see it's author ID
 
-            const messageId = this.getId($message);
-
-            const message = await this.get(messageId);
+            const message = await this.get($message);
 
             return message ? message.author.id : null;
         },
@@ -157,14 +158,16 @@ const bot: BotManager = {
                 if (match) return match[1];
             }
 
-            const messageId = this.getId($message);
-            const message = await this.get(messageId);
+            /// Presumably all of the bot users have custom avatar, so it shouldnt bother with default avatar users
+            /// Otherwise it would request from Discord API every message that a default avatar user rolls
+            return null;
+            // const message = await this.get($message);
 
-            if (!message) return null;
+            // if (!message) return null;
 
-            const userId = message.interaction?.user.id;
+            // const userId = message.interaction?.user.id;
 
-            return userId || null;
+            // return userId || null;
         },
     },
 
@@ -679,21 +682,18 @@ const bot: BotManager = {
                             }
 
                             const isProtected = !!$msg.querySelector("img[alt=':wishprotect:']");
+                            const canClaimImmediately = !isProtected || (interactionUserId && marriageableUser.id === interactionUserId);
 
-                            if (!isProtected || (interactionUserId && marriageableUser.id === interactionUserId)) {
-                                setTimeout(() => {
-                                    marriageableUser.reactToMessage($msg)
-                                        .catch(err => bot.log.error(`User ${marriageableUser.username} couldn't react to a message: ${err.message}`, false));
-                                }, 250 + claimDelay);
-                                return;
-                            }
+                            if (!canClaimImmediately) claimDelay = 2905 + Math.max(claimDelay - 2905, 0);
 
-                            /// Delay to claim protected wishes
-                            setTimeout(() => {
-                                marriageableUser.reactToMessage($msg)
-                                    .catch(err => bot.log.error(`User ${marriageableUser.username} couldn't react to a protected character: ${err.message}`, false));
-                            }, 2905 + Math.max(claimDelay - 2905, 0));
-                            return;
+                            const thisClaim = () => {
+                                marriageableUser.pressMessageButton($msg)
+                                    .catch(err => bot.log.error(`User ${marriageableUser.username} couldn't react to a message: ${err.message}`, false));
+                            };
+
+                            if (!claimDelay) return thisClaim();
+
+                            setTimeout(() => thisClaim(), 2905 + Math.max(claimDelay - 2905, 0));
                         }
 
                         bot.log.warn(`Can't claim character ${characterName} right now.`); //# Add reference to character message
@@ -737,13 +737,13 @@ const bot: BotManager = {
                                         if (bot.preferences.kakera.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
 
                                         setTimeout(() => {
-                                            botUser.reactToMessage($msg)
+                                            botUser.pressMessageButton($msg)
                                                 .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
                                         }, claimDelay * 1000);
                                         return;
                                     }
 
-                                    botUser.reactToMessage($msg)
+                                    botUser.pressMessageButton($msg)
                                         .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
                                     return;
                                 }
