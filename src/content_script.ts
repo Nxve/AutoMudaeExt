@@ -70,82 +70,67 @@ const bot: BotManager = {
                     .catch(reject);
             });
         },
-        get(messageId) {
-            return new Promise((resolve, reject) => {
-                if (this._DiscordMessageCache.has(messageId)) {
-                    resolve(this._DiscordMessageCache.get(messageId) as DiscordMessage);
-                    return;
-                }
+        async get(messageId) {
+            if (this._DiscordMessageCache.has(messageId)) {
+                return this._DiscordMessageCache.get(messageId) as DiscordMessage;
+            }
 
-                this._fetch(messageId)
-                    .then(msg => {
-                        this._DiscordMessageCache.set(messageId, msg);
-                        resolve(msg);
-                    })
-                    .catch(reject);
-            });
+            const message = await this._fetch(messageId);
+            this._DiscordMessageCache.set(messageId, message);
+
+            return message;
         },
         getId($message) {
             return getLastFromArray($message.id.split("-"));
         },
-        getAuthorId($message) {
-            return new Promise((resolve, reject) => {
-                if (this._MessageAuthorCache.has($message)) {
-                    resolve(this._MessageAuthorCache.get($message) as string | null);
-                    return;
+        async getAuthorId($message) {
+            if (this._MessageAuthorCache.has($message)) {
+                return this._MessageAuthorCache.get($message) as string | null;
+            }
+
+            let $targetMessage = $message;
+            let $avatar: HTMLImageElement | null | undefined;
+
+            while (!$avatar) {
+                $avatar = $targetMessage.querySelector("img[class^='avatar']") as HTMLImageElement | null;
+                if ($avatar) break;
+
+                /// This message is probably in a sequence of messages from the same person
+                /// So it seeks for the previous messages with an avatar
+                if ($targetMessage.previousElementSibling) {
+                    $targetMessage = $targetMessage.previousElementSibling as HTMLElement;
                 }
 
-                let $targetMessage = $message;
-                let $avatar: HTMLImageElement | null | undefined;
-
-                while (!$avatar) {
-                    $avatar = $targetMessage.querySelector("img[class^='avatar']") as HTMLImageElement | null;
-                    if ($avatar) break;
-
-                    /// This message is probably in a sequence of messages from the same person
-                    /// So it seeks for the previous messages with an avatar
+                /// If it's not an `li`, it must be the red divisor of new messages, which would be an `div`
+                /// It will keep seeking for previous elements until it reaches "old" messages, before the divisor
+                while ($targetMessage && $targetMessage.tagName !== "LI") {
                     if ($targetMessage.previousElementSibling) {
                         $targetMessage = $targetMessage.previousElementSibling as HTMLElement;
                     }
-
-                    /// If it's not an `li`, it must be the red divisor of new messages, which would be an `div`
-                    /// It will keep seeking for previous elements until it reaches "old" messages, before the divisor
-                    while ($targetMessage && $targetMessage.tagName !== "LI") {
-                        if ($targetMessage.previousElementSibling) {
-                            $targetMessage = $targetMessage.previousElementSibling as HTMLElement;
-                        }
-                    }
-
-                    if (!$avatar && !$targetMessage) {
-                        /// No more messages to search for the avatar
-                        // bot.log.error("Couldn't get author ID from message [?]", false); //# Add reference to message
-                        break;
-                    }
                 }
 
-                if ($avatar) {
-                    const match = /avatars\/(\d+)\//.exec($avatar.src);
-
-                    if (match) return resolve(match[1]);
+                if (!$avatar && !$targetMessage) {
+                    /// No more messages to search for the avatar
+                    // bot.log.error("Couldn't get author ID from message [?]", false); //# Add reference to message
+                    break;
                 }
+            }
 
-                /// Couldn't get avatar from messages, which would be really strange
-                /// Or it's from an user that has no custom avatar
-                /// Then it will try to fetch this message from Discord API to see it's author ID
+            if ($avatar) {
+                const match = /avatars\/(\d+)\//.exec($avatar.src);
 
-                const messageId = this.getId($message);
+                if (match) return match[1];
+            }
 
-                this.get(messageId)
-                    .then(msg => {
-                        if (!msg) {
-                            resolve(null);
-                            return;
-                        }
+            /// Couldn't get avatar from messages, which would be really strange
+            /// Or it's from an user that has no custom avatar
+            /// Then it will try to fetch this message from Discord API to see it's author ID
 
-                        resolve(msg.author.id);
-                    })
-                    .catch(reject);
-            });
+            const messageId = this.getId($message);
+
+            const message = await this.get(messageId);
+
+            return message ? message.author.id : null;
         },
         async isFromMudae($message) {
             const messageAuthorId = await this.getAuthorId($message);
