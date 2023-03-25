@@ -46,8 +46,8 @@ export const randomSessionID = (): string => {
         const currentChar = base.charAt(i);
 
         const randomChar: string = currentChar === '0' ?
-        Math.floor(Math.random() * 10).toString() :
-        letters.charAt(Math.floor(Math.random() * letters.length));
+            Math.floor(Math.random() * 10).toString() :
+            letters.charAt(Math.floor(Math.random() * letters.length));
 
         output.push(randomChar);
     }

@@ -11,15 +11,15 @@ import { ReactComponent as SVG_STACK } from "../svg/stack.svg"
 import { ReactComponent as SVG_PERSON } from "../svg/person.svg"
 
 export const SVGS = {
-    PAUSE_FILL: <SVG_PAUSE_FILL/>,
-    ARROW_FILL: <SVG_ARROW_FILL/>,
-    ARROW: <SVG_ARROW/>,
-    GEAR: <SVG_GEAR/>,
-    PLUS: <SVG_PLUS/>,
-    X: <SVG_X/>,
-    EXCLAMATION_DIAMOND: <SVG_EXCLAMATION_DIAMOND/>,
-    EXCLAMATION: <SVG_EXCLAMATION/>,
-    LIST_CHECKED: <SVG_LIST_CHECKED/>,
-    STACK: <SVG_STACK/>,
-    PERSON: <SVG_PERSON/>
+    PAUSE_FILL: <SVG_PAUSE_FILL />,
+    ARROW_FILL: <SVG_ARROW_FILL />,
+    ARROW: <SVG_ARROW />,
+    GEAR: <SVG_GEAR />,
+    PLUS: <SVG_PLUS />,
+    X: <SVG_X />,
+    EXCLAMATION_DIAMOND: <SVG_EXCLAMATION_DIAMOND />,
+    EXCLAMATION: <SVG_EXCLAMATION />,
+    LIST_CHECKED: <SVG_LIST_CHECKED />,
+    STACK: <SVG_STACK />,
+    PERSON: <SVG_PERSON />
 } as const;
