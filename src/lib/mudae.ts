@@ -46,6 +46,15 @@ const KAKERAS = {
     }
 };
 
+const SLASH_COMMANDS = {
+    "wx": { version: "832172261968314389", id: "832172261968314388" },
+    "wa": { version: "832172151729422418", id: "832172151729422417" },
+    "wg": { version: "832172216665374751", id: "832172216665374750" },
+    "hx": { version: "832172373536669707", id: "832172373536669706" },
+    "ha": { version: "832172457028747337", id: "832172457028747336" },
+    "hg": { version: "832172416192872459", id: "832172416192872458" },
+} as const;
+
 export type KAKERA = keyof typeof KAKERAS;
 
 for (const _kakera in KAKERAS) {
@@ -54,4 +63,4 @@ for (const _kakera in KAKERAS) {
     KAKERAS[kakera].emoji = `${KAKERAS[kakera].internalName}%3A${KAKERAS[kakera].imgSrc}`;
 }
 
-export { KAKERAS }
+export { KAKERAS, SLASH_COMMANDS }

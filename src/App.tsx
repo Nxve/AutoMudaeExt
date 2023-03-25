@@ -1,17 +1,19 @@
-import type { BotState, Preferences, PrefLanguage, PrefNotification, PrefNotificationType, PrefRollType, PrefUseUsers } from "./lib/bot";
+import type { BotState, Preferences, PrefLanguage, PrefNotification, PrefNotificationType, PrefRollType, PrefUseUsers, UserInfo } from "./lib/bot";
 import type { KAKERA } from "./lib/mudae";
 import type { MessageID, Message } from "./lib/messaging";
-import type { Logs, Stats, Unseen, LogType } from "./lib/events";
+import type { Logs, Unseen, LogType } from "./lib/bot/log";
+import type { Stats, UserStatus } from "./lib/bot/status_stats";
 import type { InfoPanelType, MenuCategory, MenuSubcategory } from "./lib/app_types";
-import { blankLogs, blankStats, blankUnseen } from "./lib/events";
-import React, { useCallback, useEffect, useState } from "react";
+import { blankLogs, blankUnseen } from "./lib/bot/log";
+import { blankStats } from "./lib/bot/status_stats";
 import { isTokenValid, jsonMapSetReplacer, jsonMapSetReviver, minifyToken } from "./lib/utils";
 import { BOT_STATES, NOTIFICATIONS, defaultPreferences } from "./lib/bot";
 import { MESSAGES } from "./lib/messaging";
 import { SVGS } from "./lib/svgs";
 import { KAKERAS } from "./lib/mudae";
-import "./styles/App.css";
 import InfoPanel from "./components/InfoPanel";
+import React, { useCallback, useEffect, useState } from "react";
+import "./styles/App.css";
 
 function App() {
   /// App state
@@ -25,6 +27,7 @@ function App() {
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences());
   const [logs, setLogs] = useState<Logs>(blankLogs());
   const [stats, setStats] = useState<Stats>(blankStats());
+  const [userStatus, setUserStatus] = useState<UserStatus>(new Map());
   const [unseen, setUnseen] = useState<Unseen>(blankUnseen());
 
   /// Bot state
@@ -229,6 +232,24 @@ function App() {
     }
   };
 
+  const handleExtensionMessage = (message: Message, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
+    if (!Object.hasOwn(message, "id")) return;
+
+    switch (message.id) {
+      case MESSAGES.BOT.SYNC_USER_INFO:
+        try {
+          const { username, userinfo } = JSON.parse(message.data, jsonMapSetReviver);
+
+          setUserStatus(current => new Map(current.set(username, userinfo)));
+        } catch (error) {
+          console.error("Error while sync user info:", error);
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
   useEffect(() => {
     /// Load preferences from Chrome's storage
     chrome?.storage?.local.get("preferences")
@@ -243,7 +264,7 @@ function App() {
       .catch(console.error)
       .finally(() => setHasLoadedPreferences(true));
 
-    sendWorkerMessage(MESSAGES.APP.GET_EVERYTHING, null, (data?: { status: any, stats: Stats, logs: Logs, unseen: Unseen }) => {
+    sendWorkerMessage(MESSAGES.APP.GET_EVERYTHING, null, (data?: { stats: Stats, logs: Logs, unseen: Unseen }) => {
       if (data) {
         setStats(data.stats)
         setLogs(data.logs);
@@ -261,14 +282,22 @@ function App() {
 
         setDiscordTab(tab);
 
-        sendTabMessage(tab.id, MESSAGES.APP.GET_STATE, null, (response: { state: BotState, lastError?: string }) => {
-          if (!Object.hasOwn(BOT_STATES, response.state)) return;
+        sendTabMessage(tab.id, MESSAGES.APP.GET_STATUS, null, (response: { botState: BotState, lastError?: string, stringifiedUserStatus?: string }) => {
+          if (!Object.hasOwn(BOT_STATES, response.botState)) return;
 
-          setBotState(response.state);
+          if (response.stringifiedUserStatus) {
+            const userStatus: UserStatus = JSON.parse(response.stringifiedUserStatus, jsonMapSetReviver);
+            console.log("Loaded user status", userStatus);
+            setUserStatus(userStatus);
+          }
+
           if (response.lastError) setDynamicCantRunReason(response.lastError);
+          setBotState(response.botState);
         });
       })
-      .catch(console.error)
+      .catch(console.error);
+
+    chrome.runtime.onMessage.addListener(handleExtensionMessage);
   }, []);
 
   useEffect(() => {
@@ -293,14 +322,17 @@ function App() {
       {
         infoPanel !== null &&
         <div id="info-panel-wrapper">
-          <InfoPanel infoType={infoPanel} logs={logs} />
+          <InfoPanel infoType={infoPanel} logs={logs} userStatus={userStatus} />
         </div>
       }
       <main>
         <section id="middle-menu">
-          <div className="info-button status" data-tooltip="Status" onClick={() => toggleInfoPanel("status")}>
-            {SVGS.PERSON}
-          </div>
+          {
+            discordTab && (botState === "idle" || botState === "running") && userStatus.size > 0 &&
+            <div className="info-button status" data-tooltip="Status" onClick={() => toggleInfoPanel("status")}>
+              {SVGS.PERSON}
+            </div>
+          }
           <div className="info-button stats" data-tooltip="Stats" onClick={() => toggleInfoPanel("stats")}>
             {SVGS.LIST_CHECKED}
           </div>

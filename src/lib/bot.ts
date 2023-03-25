@@ -1,7 +1,7 @@
-import type { BotEvent } from "./events";
-import { INTERVAL_SEND_MESSAGE, MUDAE_USER_ID, SLASH_COMMANDS } from "./consts";
+import type { BotEvent } from "./bot/event";
+import { INTERVAL_SEND_MESSAGE, MUDAE_USER_ID } from "./consts";
 import { SVGS } from "./svgs";
-import { KAKERAS } from "./mudae";
+import { KAKERAS, SLASH_COMMANDS } from "./mudae";
 import { minifyToken } from "./utils";
 import type { DiscordMessage } from "./discord";
 
@@ -158,18 +158,20 @@ export const USER_INFO = {
     CONSUMPTION: "kakera_consumption"
 } as const;
 
-const NEEDED_USER_INFO = [
+export type UserInfo = typeof USER_INFO[keyof typeof USER_INFO];
+
+const NEEDED_USER_INFO: UserInfo[] = [
     USER_INFO.ROLLS_LEFT,
     USER_INFO.ROLLS_MAX,
     USER_INFO.POWER,
     USER_INFO.CAN_RT,
     USER_INFO.CAN_MARRY,
     USER_INFO.CONSUMPTION
-] as const;
+];
 
 export class BotUser {
     manager: BotManager
-    info: Map<typeof USER_INFO[keyof typeof USER_INFO], unknown>
+    info: Map<UserInfo, unknown>
     token: string
     id?: string
     username?: string

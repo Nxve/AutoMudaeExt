@@ -1,5 +1,6 @@
-import type { BotLog, ErrorLog, EventLog, WarnLog } from "../lib/events";
-import { EVENTS, LOG_TYPES } from "../lib/events";
+import type { BotLog, ErrorLog, EventLog, WarnLog } from "../lib/bot/log";
+import { LOG_TYPES } from "../lib/bot/log";
+import { EVENTS } from "../lib/bot/event";
 
 //# Add icons, colors and such (Kakera type as icon)
 function EventContent({ eventLog }: { eventLog: EventLog }) {

@@ -1,13 +1,17 @@
-import type { Logs } from "../lib/events";
 import type { InfoPanelType } from "../lib/app_types"
+import type { Logs } from "../lib/bot/log";
+import type { UserStatus } from "../lib/bot/status_stats";
 import InfoList from "./InfoList";
+import StatusPanel from "./StatusPanel";
+import "../styles/InfoPanel.css";
 
 interface IInfoPanelProps {
     infoType: NonNullable<InfoPanelType>
     logs: Logs
+    userStatus: UserStatus
 }
 
-function InfoPanel({ infoType, logs }: IInfoPanelProps) {
+function InfoPanel({ infoType, logs, userStatus }: IInfoPanelProps) {
     return (
         <section id="info-panel">
             <header>
@@ -16,8 +20,11 @@ function InfoPanel({ infoType, logs }: IInfoPanelProps) {
             {
                 (infoType === "warns" || infoType === "errors" || infoType === "events") ?
                     <InfoList infoType={infoType} logs={logs[infoType]} />
-                    :
-                    <div></div>
+                    : (infoType === "status") ?
+                        <StatusPanel userStatus={userStatus} /> :
+                        <div>
+                            {/* Stats */}
+                        </div>
             }
         </section>
     )

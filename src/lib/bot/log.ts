@@ -1,3 +1,5 @@
+import type { BotEvent } from "./event";
+
 export type LogType = typeof LOG_TYPES[keyof typeof LOG_TYPES];
 
 export interface BotLog {
@@ -23,37 +25,9 @@ export interface Logs {
     errors: ErrorLog[]
 };
 
-export interface Stats {
-    characters: {
-        [username: string]: string[]
-    }
-    soulmates: {
-        [username: string]: string[]
-    }
-    steals: { character: string | null, user: string | null }[]
-    kakera: {
-        perType: {
-            [kakeraInternalName: string]: number
-        }
-        amount: {
-            [username: string]: number
-        }
-    }
-};
-
 export type Unseen = {
     [T in LogType]: number;
 };
-
-export type BotEvent = typeof EVENTS[keyof typeof EVENTS];
-
-export const EVENTS = {
-    STEAL: "steal",
-    CLAIM: "claim",
-    KAKERA: "kakera",
-    SOULMATE: "soulmate",
-    FOUND_CHARACTER: "found_character"
-} as const;
 
 export const LOG_TYPES = {
     EVENT: "event",
@@ -71,16 +45,6 @@ export const blankLogs = (): Logs => ({
     events: [],
     warns: [],
     errors: []
-});
-
-export const blankStats = (): Stats => ({
-    characters: {},
-    soulmates: {},
-    steals: [],
-    kakera: {
-        perType: {},
-        amount: {}
-    }
 });
 
 export const blankUnseen = (): Unseen => ({

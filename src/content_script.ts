@@ -1,14 +1,15 @@
-import type { BotManager, Preferences } from "./lib/bot";
+import type { BotManager, BotState, Preferences } from "./lib/bot";
 import type { Message } from "./lib/messaging";
 import type { KAKERA } from "./lib/mudae";
+import type { UserStatus } from "./lib/bot/status_stats";
+import type { DiscordMessage } from "./lib/discord";
 import { DISCORD_INFO } from "./lib/bot";
 import { BotUser, USER_INFO } from "./lib/bot";
 import { INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID, INTERVAL_DONT_ROLL_AFTER_ACTIVITY } from "./lib/consts";
 import { MESSAGES } from "./lib/messaging";
 import { KAKERAS } from "./lib/mudae";
-import { getLastFromArray, jsonMapSetReviver, randomFloat, randomSessionID } from "./lib/utils";
-import { EVENTS } from "./lib/events";
-import type { DiscordMessage } from "./lib/discord";
+import { getLastFromArray, jsonMapSetReplacer, jsonMapSetReviver, minifyToken, randomFloat, randomSessionID } from "./lib/utils";
+import { EVENTS } from "./lib/bot/event";
 
 const bot: BotManager = {
     state: "waiting_injection",
@@ -144,8 +145,8 @@ const bot: BotManager = {
 
             if (!messageAuthorId) return null;
 
-            for (const user of bot.users) {
-                if (user.id === messageAuthorId) return user;
+            for (const botUser of bot.users) {
+                if (botUser.id === messageAuthorId) return botUser;
             }
 
             return null;
@@ -183,7 +184,7 @@ const bot: BotManager = {
             this._t.set(identifier, timer);
         },
         clear() {
-            for (const [_, t] of this._t) {
+            for (const [, t] of this._t) {
                 t.isInterval ? clearInterval(t.ref) : clearTimeout(t.ref);
             }
             this._t.clear();
@@ -198,8 +199,8 @@ const bot: BotManager = {
     },
 
     hasNeededInfo() {
-        for (const user of this.users) {
-            if (!user.hasNeededInfo()) return false;
+        for (const botUser of this.users) {
+            if (!botUser.hasNeededInfo()) return false;
         }
         return true;
     },
@@ -233,16 +234,16 @@ const bot: BotManager = {
 
         let marriageableUser;
 
-        for (const user of this.users) {
-            if (!user.nick) {
-                this.error(`Couldn't get nickname for ${user.username ? ("user " + user.username) : ("token " + user.token)}`);
+        for (const botUser of this.users) {
+            if (!botUser.nick) {
+                this.error(`Couldn't get nickname for ${botUser.username ? ("user " + botUser.username) : ("token " + minifyToken(botUser.token))}`);
                 return null;
             }
 
-            if (user.info.get(USER_INFO.CAN_MARRY)) {
-                marriageableUser = user;
+            if (botUser.info.get(USER_INFO.CAN_MARRY)) {
+                marriageableUser = botUser;
 
-                if (preferableUserNicknames.includes(user.nick)) break;
+                if (preferableUserNicknames.includes(botUser.nick)) break;
             }
         }
 
@@ -250,8 +251,8 @@ const bot: BotManager = {
     },
 
     getUserWithCriteria(cb) {
-        for (const user of this.users) {
-            if (cb(user)) return user;
+        for (const botUser of this.users) {
+            if (cb(botUser)) return botUser;
         }
         return null;
     },
@@ -366,10 +367,10 @@ const bot: BotManager = {
         if (!bot.hasNeededInfo()) {
             if (now - bot.cdGatherInfo < 1000) return;
 
-            for (const user of bot.users) {
-                if (!user.hasNeededInfo()) {
-                    user.sendChannelMessage("$tu")
-                        .catch(err => bot.log.error(`User ${user.username} couldn't send a channel message: ${err.message}`, false));
+            for (const botUser of bot.users) {
+                if (!botUser.hasNeededInfo()) {
+                    botUser.sendChannelMessage("$tu")
+                        .catch(err => bot.log.error(`User ${botUser.username} couldn't send a channel message: ${err.message}`, false));
                     break;
                 }
             }
@@ -496,6 +497,7 @@ const bot: BotManager = {
                                 return;
                             }
 
+                            syncUserInfo(user);
                             return;
                         };
                     }
@@ -526,6 +528,7 @@ const bot: BotManager = {
                     /// Claim
                     if (user) {
                         user.info.set(USER_INFO.CAN_MARRY, false);
+                        syncUserInfo(user);
 
                         bot.log.event(EVENTS.CLAIM, { user: user.username, character: characterName });
                         //# beep
@@ -597,9 +600,10 @@ const bot: BotManager = {
                             const powerCost: number = kakeraType === KAKERAS.PURPLE.internalName ? 0 : (user.info.get(USER_INFO.CONSUMPTION) as number);
 
                             if (powerCost > 0) {
-                                const newPower = (user.info.get(USER_INFO.POWER) as number) - powerCost;
+                                const newPower = Math.max((user.info.get(USER_INFO.POWER) as number) - powerCost, 0);
 
                                 user.info.set(USER_INFO.POWER, newPower);
+                                syncUserInfo(user);
                             }
 
                             bot.log.event(EVENTS.KAKERA, { user: user.username, amount: kakeraQuantity, type: kakeraType });
@@ -633,9 +637,10 @@ const bot: BotManager = {
                     const user = bot.getUserWithCriteria(user => user.id === interactionUserId);
 
                     if (user) {
-                        const rollsLeft = (user.info.get(USER_INFO.ROLLS_LEFT) as number) - 1;
+                        const rollsLeft = (user.info.get(USER_INFO.ROLLS_LEFT) as number);
 
-                        user.info.set(USER_INFO.ROLLS_LEFT, rollsLeft);
+                        user.info.set(USER_INFO.ROLLS_LEFT, Math.max(rollsLeft - 1, 0));
+                        syncUserInfo(user);
 
                         const $embedDescription = $msg.querySelector("div[class^='embedDescription']") as HTMLElement | null;
 
@@ -778,12 +783,37 @@ const syncPreferences = (newPreferences: Preferences) => {
     }
 };
 
+const syncUserInfo = (user: BotUser) => {
+    const userInfoData = { username: user.username, userinfo: user.info };
+    const stringifiedData = JSON.stringify(userInfoData, jsonMapSetReplacer);
+
+    chrome.runtime.sendMessage({ id: MESSAGES.BOT.SYNC_USER_INFO, data: stringifiedData });
+};
+
 const handleExtensionMessage = (message: Message, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
     if (!Object.hasOwn(message, "id")) return;
 
     switch (message.id) {
-        case MESSAGES.APP.GET_STATE:
-            sendResponse({ state: bot.state, lastError: bot.lastErrorMessage });
+        case MESSAGES.APP.GET_STATUS:
+            const response: {
+                botState: BotState
+                lastError?: string
+                stringifiedUserStatus?: string
+            } = { botState: bot.state };
+
+            if (bot.lastErrorMessage) response.lastError = bot.lastErrorMessage;
+
+            if ((bot.state === "idle" || bot.state === "running") && bot.hasNeededInfo()) {
+                const userStatus: UserStatus = new Map();
+
+                for (const botUser of bot.users) {
+                    userStatus.set(botUser.username as string, botUser.info);
+                }
+
+                response.stringifiedUserStatus = JSON.stringify(userStatus, jsonMapSetReplacer);
+            }
+
+            sendResponse(response);
             break;
         case MESSAGES.APP.INJECTION:
             bot.preferences = JSON.parse(message.data, jsonMapSetReviver);

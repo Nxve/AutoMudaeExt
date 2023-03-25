@@ -1,6 +1,6 @@
 export const MESSAGES = {
     APP: {
-        GET_STATE: "get_state",
+        GET_STATUS: "get_status",
         INJECTION: "injection",
         TOGGLE: "toggle",
         SYNC_PREFERENCES: "sync_preferences",
@@ -10,7 +10,8 @@ export const MESSAGES = {
     BOT: {
         WARN: "warn",
         ERROR: "error",
-        EVENT: "event"
+        EVENT: "event",
+        SYNC_USER_INFO: "sync_user_info"
     },
 } as const;
 

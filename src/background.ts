@@ -1,6 +1,11 @@
-import { EventLog, ErrorLog, BotEvent, WarnLog, Logs, Stats, LogType, Unseen, LOG_BADGE_COLORS, LOG_TYPES } from "./lib/events";
+import type { EventLog, ErrorLog, WarnLog, Logs, LogType, Unseen } from "./lib/bot/log";
+import type { BotEvent } from "./lib/bot/event";
+import type { Stats } from "./lib/bot/status_stats";
 import type { Message } from "./lib/messaging";
-import { EVENTS, blankLogs, blankStats, blankUnseen } from "./lib/events";
+import { LOG_BADGE_COLORS, LOG_TYPES } from "./lib/bot/log";
+import { blankLogs, blankUnseen } from "./lib/bot/log";
+import { blankStats } from "./lib/bot/status_stats";
+import { EVENTS } from "./lib/bot/event";
 import { MESSAGES } from "./lib/messaging";
 import { dateToHMS } from "./lib/utils";
 
@@ -122,12 +127,14 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
             increaseUnseen(LOG_TYPES.EVENT);
             break;
         case MESSAGES.APP.GET_EVERYTHING:
+            // chrome.notifications.create("", {type: "basic", title: "Test", message: "Msg", iconUrl: "../../128.png"});
+
             (async () => {
                 const stats = await getStats();
                 const logs = await getLogs();
                 const unseen = await getUnseen();
 
-                sendResponse({ status: null, stats, logs, unseen });
+                sendResponse({ stats, logs, unseen });
             })();
 
             return true;

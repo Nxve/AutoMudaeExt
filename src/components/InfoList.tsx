@@ -1,4 +1,4 @@
-import type { BotLog } from "../lib/events";
+import type { BotLog } from "../lib/bot/log";
 import type { InfoPanelType } from "../lib/app_types"
 import LogItem from "./LogItem";
 import { useEffect, useRef } from "react";
