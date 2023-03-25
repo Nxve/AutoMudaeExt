@@ -287,7 +287,6 @@ function App() {
 
           if (response.stringifiedUserStatus) {
             const userStatus: UserStatus = JSON.parse(response.stringifiedUserStatus, jsonMapSetReviver);
-            console.log("Loaded user status", userStatus);
             setUserStatus(userStatus);
           }
 
