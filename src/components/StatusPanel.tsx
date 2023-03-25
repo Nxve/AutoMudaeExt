@@ -36,11 +36,17 @@ function StatusPanel({ userStatus }: IStatusPanelProps) {
                 </em>
                 <div className="status-inner">
                     {
-                        arrayUserStatus.map(([username, userinfo]) =>
-                            <em key={`status-roll-${username}`}>
+                        arrayUserStatus.map(([username, userinfo]) => {
+                            const rollsLeft = userinfo.get(USER_INFO.ROLLS_LEFT) as number;
+                            const rollsLeftUs = userinfo.get(USER_INFO.ROLLS_LEFT_US) as number | undefined;
+
+                            const strRollsLeft: string = (rollsLeftUs != null && rollsLeftUs > 0) ? `${rollsLeft}+${rollsLeftUs}` : rollsLeft.toString();
+
+                            return (<em key={`status-roll-${username}`}>
                                 <span>{username}:</span>
-                                <span>({userinfo.get(USER_INFO.ROLLS_LEFT) as number}/{userinfo.get(USER_INFO.ROLLS_MAX) as number})</span>
-                            </em>
+                                <span>({strRollsLeft}/{userinfo.get(USER_INFO.ROLLS_MAX) as number})</span>
+                            </em>)
+                        }
                         )
                     }
                 </div>

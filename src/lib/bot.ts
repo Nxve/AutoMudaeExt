@@ -152,6 +152,7 @@ export const DISCORD_INFO = {
 export const USER_INFO = {
     ROLLS_MAX: "rolls_max",
     ROLLS_LEFT: "rolls_left",
+    ROLLS_LEFT_US: "rolls_left_us",
     POWER: "power",
     CAN_RT: "can_rt",
     CAN_MARRY: "can_marry",

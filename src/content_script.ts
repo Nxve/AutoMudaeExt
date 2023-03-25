@@ -379,7 +379,14 @@ const bot: BotManager = {
             return;
         }
 
-        const userWithRolls = bot.getUserWithCriteria(user => (user.info.get(USER_INFO.ROLLS_LEFT) as number) > 0);
+        const userWithRolls = bot.getUserWithCriteria(user => {
+            const rollsLeft = user.info.get(USER_INFO.ROLLS_LEFT) as number;
+            const rollsLeftUs = user.info.get(USER_INFO.ROLLS_LEFT_US) as number | undefined;
+            const totalRollsLeft = rollsLeft + (rollsLeftUs || 0);
+
+            return totalRollsLeft > 0;
+        });
+
         const isRollEnabled = bot.preferences.roll.enabled;
 
         if (isRollEnabled) {
@@ -455,6 +462,13 @@ const bot: BotManager = {
                                 }
 
                                 user.info.set(USER_INFO.ROLLS_LEFT, rolls);
+                            }
+
+                            const matchRollsUs = /\(\+(\d+) \$us\)/.exec(mudaeResponse);
+                            if (matchRollsUs) {
+                                const rollsUs = Number(matchRollsUs[1]);
+
+                                user.info.set(USER_INFO.ROLLS_LEFT_US, rollsUs);
                             }
 
                             const matchPower = /Power: (\d+)%/.exec(mudaeResponse);
@@ -637,9 +651,16 @@ const bot: BotManager = {
                     const user = bot.getUserWithCriteria(user => user.id === interactionUserId);
 
                     if (user) {
-                        const rollsLeft = (user.info.get(USER_INFO.ROLLS_LEFT) as number);
+                        const rollsUs = (user.info.get(USER_INFO.ROLLS_LEFT_US) as number | undefined);
 
-                        user.info.set(USER_INFO.ROLLS_LEFT, Math.max(rollsLeft - 1, 0));
+                        if (rollsUs != null && rollsUs > 0) {
+                            user.info.set(USER_INFO.ROLLS_LEFT_US, Math.max(rollsUs - 1, 0));
+                        } else {
+                            const rollsLeft = (user.info.get(USER_INFO.ROLLS_LEFT) as number);
+
+                            user.info.set(USER_INFO.ROLLS_LEFT, Math.max(rollsLeft - 1, 0));
+                        }
+
                         syncUserInfo(user);
 
                         const $embedDescription = $msg.querySelector("div[class^='embedDescription']") as HTMLElement | null;
