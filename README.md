@@ -6,9 +6,9 @@ It is still in early development, thus unavailable in webstore and not really fu
 You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
 #### Roadmap to get it working:
-- Replace every session_id with random generated 32 char strings
-- Status & Stats
-- When getting state from a tab, get last error too
+- When getting rolls_left from $tu, check for extra rolls from $us too
+- Sync events
+- Stats
 - Notifications
     - Some of the events should trigger sound notifications
 - Option to watch for mentioned nicknames: sniping
@@ -23,6 +23,10 @@ You can expect it to be available for use after the completion of the below road
         - Custom avatar for each user
         - Slash commands only
         - $tu exposing every needed info
+
+
+#### Known bugs:
+- Sync preferences when first opening the app
 
 #### Secondary plans:
 - Styling:
