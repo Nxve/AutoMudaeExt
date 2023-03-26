@@ -6,8 +6,6 @@ It is still in early development, thus unavailable in webstore and not really fu
 You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
 #### Roadmap to get it working:
-- When getting rolls_left from $tu, check for extra rolls from $us too
-- Sync events
 - Stats
 - Notifications
     - Some of the events should trigger sound notifications
@@ -15,6 +13,7 @@ You can expect it to be available for use after the completion of the below road
 - Add to total claimed kakera those received from EMERALD IV reward
 - Guild Config:
     - Option to get from `/server settings`
+    - Adapt to guild prefix in typed commands, as `$tu`, `$dk`, `$us` and such
     - Add other language support
 - Version control over preferences
 - Advise about it's requirements:
