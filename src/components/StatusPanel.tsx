@@ -14,8 +14,6 @@ function StatusPanel({ userStatus }: IStatusPanelProps) {
     let canRT = false;
     const arrayUserStatus = [...userStatus];
 
-    console.log(arrayUserStatus);
-
     for (const [, userinfo] of userStatus) {
         totalRollsLeft += userinfo.get(USER_INFO.ROLLS_LEFT) as number;
         totalRollsMax += userinfo.get(USER_INFO.ROLLS_MAX) as number;
