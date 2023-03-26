@@ -73,6 +73,7 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
                 return logs;
             });
             increaseUnseen(LOG_TYPES.WARN);
+            sendResponse();
             break;
         case MESSAGES.BOT.ERROR:
             updateLogs(logs => {
@@ -81,6 +82,7 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
                 return logs;
             });
             increaseUnseen(LOG_TYPES.ERROR);
+            sendResponse();
             break;
         case MESSAGES.BOT.EVENT:
             updateLogs(logs => {
@@ -122,6 +124,7 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
             });
 
             increaseUnseen(LOG_TYPES.EVENT);
+            sendResponse();
             break;
         case MESSAGES.APP.GET_EVERYTHING:
             // chrome.notifications.create("", {type: "basic", title: "Test", message: "Msg", iconUrl: "../../128.png"});
@@ -135,8 +138,18 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
             })();
 
             return true;
+        case MESSAGES.APP.GET_EVENTS:
+            (async () => {
+                const logs = await getLogs();
+                const unseen = await getUnseen();
+
+                sendResponse({ logs, unseen });
+            })();
+
+            return true;
         case MESSAGES.APP.CLEAR_UNSEEN:
             clearUnseen(message.data);
+            sendResponse();
             break;
         default:
             break;

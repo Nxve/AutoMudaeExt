@@ -861,6 +861,7 @@ const handleExtensionMessage = (message: Message, _sender: chrome.runtime.Messag
                 const newPreferences: Preferences = JSON.parse(message.data, jsonMapSetReviver);
 
                 syncPreferences(newPreferences);
+                sendResponse();
             } catch (error: any) {
                 sendResponse(error instanceof Error ? error.message : String(error));
             }

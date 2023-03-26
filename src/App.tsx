@@ -111,9 +111,11 @@ function App() {
   };
 
   const toggleInfoPanel = (infoPanelCategory?: InfoPanelType) => {
-    setInfoPanel(infoPanelCategory ? (infoPanelCategory === infoPanel ? null : infoPanelCategory) : null);
+    const isFolding = infoPanelCategory && infoPanelCategory === infoPanel;
 
-    if (infoPanelCategory === "events" || infoPanelCategory === "warns" || infoPanelCategory === "errors") {
+    setInfoPanel(infoPanelCategory ? (isFolding ? null : infoPanelCategory) : null);
+
+    if (!isFolding && (infoPanelCategory === "events" || infoPanelCategory === "warns" || infoPanelCategory === "errors")) {
       clearUnseen(infoPanelCategory.slice(0, infoPanelCategory.length - 1) as LogType);
     }
   };
@@ -244,6 +246,20 @@ function App() {
         } catch (error) {
           console.error("Error while sync user info:", error);
         }
+        break;
+      case MESSAGES.BOT.ERROR:
+      case MESSAGES.BOT.WARN:
+      case MESSAGES.BOT.EVENT:
+        sendWorkerMessage(MESSAGES.APP.GET_EVENTS, null, (data?: { logs: Logs, unseen: Unseen }) => {
+          if (data) {
+            setLogs(data.logs);
+            setUnseen(data.unseen);
+
+            if (infoPanel === "events" || infoPanel === "warns" || infoPanel === "errors") {
+              clearUnseen(infoPanel.slice(0, infoPanel.length - 1) as LogType);
+            }
+          }
+        });
         break;
       default:
         break;
