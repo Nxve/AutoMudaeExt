@@ -1,6 +1,5 @@
 #app {
   --panels-width: 200px;
-  --middle-menu-width: 20px;
 
   width: fit-content;
   display: flex;
@@ -15,59 +14,6 @@ main {
 #info-panel-wrapper {
   position: relative;
   width: var(--panels-width);
-}
-
-/* Middle Menu */
-
-#middle-menu {
-  width: var(--middle-menu-width);
-  padding: 5px;
-  gap: 5px;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--primary-800);
-}
-
-.info-button {
-  width: var(--middle-menu-width);
-  height: var(--middle-menu-width);
-  display: grid;
-  place-content: center;
-  color: var(--white-530);
-  background-color: var(--primary-560);
-  border-radius: 33%;
-  cursor: pointer;
-  transition: 200ms;
-}
-
-.info-button.warns {
-  color: var(--yellow-260);
-}
-
-.info-button.errors {
-  color: var(--red-400);
-}
-
-#middle-menu>div:hover {
-  background-color: var(--primary-500);
-}
-
-#middle-menu>div[data-notifications-count]::before {
-  content: attr(data-notifications-count);
-  position: absolute;
-  right: -3px;
-  bottom: -25%;
-  min-width: 7px;
-  /* width: 10px; */
-  height: 10px;
-  padding-inline: 1px;
-  border-radius: 3px;
-  font-size: .6rem;
-  font-weight: 500;
-  text-align: center;
-  color: white;
-  background-color: red;
-  pointer-events: none;
 }
 
 /* Main Menu */
@@ -336,13 +282,6 @@ header span {
   pointer-events: none;
   user-select: none;
   animation: opacity-up 150ms forwards;
-}
-
-.info-button[data-tooltip]:hover::after {
-  bottom: 0%;
-  margin-bottom: 0;
-  left: 100%;
-  margin-left: 6px;
 }
 
 @keyframes opacity-up {

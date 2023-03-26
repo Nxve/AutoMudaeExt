@@ -13,6 +13,7 @@ import { SVGS } from "./lib/svgs";
 import { KAKERAS } from "./lib/mudae";
 import debounce from "lodash/debounce";
 import InfoPanel from "./components/InfoPanel";
+import NavBar from "./components/NavBar";
 import React, { useCallback, useEffect, useState } from "react";
 import "./styles/App.css";
 
@@ -327,7 +328,7 @@ function App() {
       })
       .catch(console.error);
 
-    chrome.runtime.onMessage.addListener(handleExtensionMessage);
+    chrome?.runtime?.onMessage.addListener(handleExtensionMessage);
 
     setDidMount(true);
   }, []);
@@ -353,26 +354,11 @@ function App() {
         </div>
       }
       <main>
-        <section id="middle-menu">
-          {
-            discordTab && (botState === "idle" || botState === "running") && userStatus.size > 0 &&
-            <div className="info-button status" data-tooltip="Status" onClick={() => toggleInfoPanel("status")}>
-              {SVGS.PERSON}
-            </div>
-          }
-          <div className="info-button stats" data-tooltip="Stats" onClick={() => toggleInfoPanel("stats")}>
-            {SVGS.LIST_CHECKED}
-          </div>
-          <div className="info-button events" data-tooltip="Events" data-notifications-count={unseen.event || null} onClick={() => toggleInfoPanel("events")}>
-            {SVGS.STACK}
-          </div>
-          <div className="info-button warns" data-tooltip="Warns" data-notifications-count={unseen.warn || null} onClick={() => toggleInfoPanel("warns")}>
-            {SVGS.EXCLAMATION}
-          </div>
-          <div className="info-button errors" data-tooltip="Errors" data-notifications-count={unseen.error || null} onClick={() => toggleInfoPanel("errors")}>
-            {SVGS.EXCLAMATION}
-          </div>
-        </section>
+        <NavBar
+          showStatusButton={discordTab != null && (botState === "idle" || botState === "running") && userStatus.size > 0}
+          toggleInfoPanel={toggleInfoPanel}
+          unseen={unseen}
+        />
         <section id="main-menu" {...isWide() && ({ className: "wide" })}>
           <header>
             <img src="128.png" alt="App Icon" />
