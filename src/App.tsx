@@ -11,6 +11,7 @@ import { BOT_STATES, NOTIFICATIONS, defaultPreferences } from "./lib/bot";
 import { MESSAGES } from "./lib/messaging";
 import { SVGS } from "./lib/svgs";
 import { KAKERAS } from "./lib/mudae";
+import debounce from "lodash/debounce";
 import InfoPanel from "./components/InfoPanel";
 import React, { useCallback, useEffect, useState } from "react";
 import "./styles/App.css";
@@ -22,7 +23,8 @@ function App() {
   const [infoPanel, setInfoPanel] = useState<InfoPanelType>(null);
   const [configuringKakeraPerToken, setConfiguringKakeraPerToken] = useState("");
   const [tokenList, setTokenList] = useState<string[]>([]);
-  const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
+  const [hasJustLoadedPreferences, setJustLoadedPreferences] = useState(false);
+  const [didMount, setDidMount] = useState(false);
 
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences());
   const [logs, setLogs] = useState<Logs>(blankLogs());
@@ -266,6 +268,19 @@ function App() {
     }
   };
 
+  const handlePreferencesChange = useCallback(debounce(() => {
+    broadcastMessage(
+      MESSAGES.APP.SYNC_PREFERENCES,
+      JSON.stringify(preferences, jsonMapSetReplacer),
+      (err?: Error) => { if (err) console.error(err) }
+    );
+
+    chrome?.storage?.local.set({
+      preferences: JSON.stringify(preferences, jsonMapSetReplacer)
+    })
+      .catch(console.error);
+  }, 500, { leading: true }), []);
+
   useEffect(() => {
     /// Load preferences from Chrome's storage
     chrome?.storage?.local.get("preferences")
@@ -278,7 +293,7 @@ function App() {
         }
       })
       .catch(console.error)
-      .finally(() => setHasLoadedPreferences(true));
+      .finally(() => setJustLoadedPreferences(true));
 
     sendWorkerMessage(MESSAGES.APP.GET_EVERYTHING, null, (data?: { stats: Stats, logs: Logs, unseen: Unseen }) => {
       if (data) {
@@ -313,24 +328,21 @@ function App() {
       .catch(console.error);
 
     chrome.runtime.onMessage.addListener(handleExtensionMessage);
+
+    setDidMount(true);
   }, []);
 
   useEffect(() => {
-    //# Use debounce here, so it doesn't spam messages and store process when
-    //# the user is changing a range input or something
-    if (!hasLoadedPreferences) return;
+    if (!didMount) return;
 
-    broadcastMessage(
-      MESSAGES.APP.SYNC_PREFERENCES,
-      JSON.stringify(preferences, jsonMapSetReplacer),
-      (err?: Error) => { if (err) console.error(err) }
-    );
+    /// Prevent execution when loading preferences from storage
+    if (hasJustLoadedPreferences) {
+      setJustLoadedPreferences(false);
+      return;
+    }
 
-    chrome?.storage?.local.set({
-      preferences: JSON.stringify(preferences, jsonMapSetReplacer)
-    })
-      .catch(console.error);
-  }, [preferences, hasLoadedPreferences, broadcastMessage]);
+    handlePreferencesChange();
+  }, [preferences]);
 
   return (
     <div id="app">

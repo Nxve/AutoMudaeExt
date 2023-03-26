@@ -857,6 +857,11 @@ const handleExtensionMessage = (message: Message, _sender: chrome.runtime.Messag
             }
             break;
         case MESSAGES.APP.SYNC_PREFERENCES:
+            if (bot.state === "waiting_injection" || bot.state === "error" || bot.state === "injection_error" || bot.state === "unknown"){
+                sendResponse();
+                return;
+            }
+
             try {
                 const newPreferences: Preferences = JSON.parse(message.data, jsonMapSetReviver);
 
