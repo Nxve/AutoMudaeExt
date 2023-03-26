@@ -116,7 +116,6 @@ const bot: BotManager = {
 
                 if (!$avatar && !$targetMessage) {
                     /// No more messages to search for the avatar
-                    // bot.log.error("Couldn't get author ID from message [?]", false); //# Add reference to message
                     break;
                 }
             }
@@ -160,16 +159,7 @@ const bot: BotManager = {
                 if (match) return match[1];
             }
 
-            /// Presumably all of the bot users have custom avatar, so it shouldnt bother with default avatar users
-            /// Otherwise it would request from Discord API every message that a default avatar user rolls
             return null;
-            // const message = await this.get($message);
-
-            // if (!message) return null;
-
-            // const userId = message.interaction?.user.id;
-
-            // return userId || null;
         },
     },
 
@@ -268,8 +258,7 @@ const bot: BotManager = {
             throw Error("Couldn't retrieve current window URL.");
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const [_, pathDiscriminator, guildId, channelId] = windowPathname.split("/");
+        const [, pathDiscriminator, guildId, channelId] = windowPathname.split("/");
 
         if (pathDiscriminator !== "channels") {
             throw Error("You must be in the desired channel.");
