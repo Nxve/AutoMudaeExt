@@ -37,7 +37,7 @@ export const LOG_TYPES = {
 
 export const LOG_BADGE_COLORS = {
     event: "#d6d6d6",
-    warn: "#d1d446",
+    warn: "#fcff69",
     error: "#ff5757"
 } as const;
 

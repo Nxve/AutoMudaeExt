@@ -29,20 +29,17 @@ const updateLogs = async (cb: (logs: Logs) => Logs) => {
     chrome.storage.session.set({ logs: cb(await getLogs()) });
 };
 
-const updateBadge = (unseen: Unseen, logType?: LogType) => {
-    let count = 0;
+const updateBadge = (unseen: Unseen) => {
+    const count = unseen.error + unseen.warn + unseen.event;
 
-    for (const type in unseen) {
-        count += unseen[type as keyof typeof unseen];
-    }
+    const hasAnyEvent = count > 0;
 
-    chrome.action.setBadgeText({ text: count ? String(count) : "" });
+    chrome.action.setBadgeText({ text: hasAnyEvent ? String(count) : "" });
 
-    if (logType) {
-        if ((logType !== LOG_TYPES.ERROR && unseen.error > 0) ||
-            (logType === LOG_TYPES.EVENT && unseen.warn > 0)) return;
+    if (hasAnyEvent) {
+        const color = unseen.error > 0 ? LOG_BADGE_COLORS.error : unseen.warn > 0 ? LOG_BADGE_COLORS.warn : LOG_BADGE_COLORS.event;
 
-        chrome.action.setBadgeBackgroundColor({ color: LOG_BADGE_COLORS[logType] });
+        chrome.action.setBadgeBackgroundColor({ color });
     }
 };
 
@@ -56,7 +53,7 @@ const increaseUnseen = async (logType: LogType) => {
     const unseen = await getUnseen();
     unseen[logType]++;
 
-    chrome.storage.session.set({ unseen }, () => updateBadge(unseen, logType));
+    chrome.storage.session.set({ unseen }, () => updateBadge(unseen));
 };
 
 const clearUnseen = async (logType: LogType) => {
