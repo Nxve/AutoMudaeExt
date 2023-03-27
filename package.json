@@ -15,6 +15,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "eject": "react-scripts eject",
     "build": "set INLINE_RUNTIME_CHUNK=false && craco build"
   },
   "eslintConfig": {
