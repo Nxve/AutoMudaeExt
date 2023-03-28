@@ -200,7 +200,7 @@ module.exports = function (webpackEnv) {
       : isEnvDevelopment && 'cheap-module-source-map',
     // These are the "entry points" to our application.
     // This means they will be the "root" imports that are included in JS bundle.
-    entry: {
+    entry: isEnvDevelopment ? paths.appIndexJs : {
       main: [env === 'development' && require.resolve('react-dev-utils/webpackHotDevClient'), paths.appIndexJs].filter(Boolean),
       content: './src/content_script.ts',
       background: './src/background.ts'
