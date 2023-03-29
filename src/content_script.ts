@@ -8,8 +8,9 @@ import { BotUser, USER_INFO } from "./lib/bot";
 import { INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID, INTERVAL_DONT_ROLL_AFTER_ACTIVITY } from "./lib/consts";
 import { MESSAGES } from "./lib/messaging";
 import { KAKERAS } from "./lib/mudae";
-import { getLastFromArray, jsonMapSetReplacer, jsonMapSetReviver, minifyToken, randomFloat, randomSessionID } from "./lib/utils";
+import { jsonMapSetReplacer, jsonMapSetReviver, minifyToken, randomFloat, randomSessionID } from "./lib/utils";
 import { EVENTS } from "./lib/bot/event";
+import _ from "lodash";
 
 const bot: BotManager = {
     state: "waiting_injection",
@@ -76,6 +77,8 @@ const bot: BotManager = {
         async get(message) {
             const messageId = typeof message === "string" ? message : this.getId(message);
 
+            if (!messageId) return null;
+
             if (this._DiscordMessageCache.has(messageId)) {
                 return this._DiscordMessageCache.get(messageId) as DiscordMessage;
             }
@@ -86,7 +89,11 @@ const bot: BotManager = {
             return msg;
         },
         getId($message) {
-            return getLastFromArray($message.id.split("-"));
+            const messageId = _.last($message.id.split("-"));
+
+            if (!messageId) console.error("Couldn't find message ID", $message);
+
+            return messageId;
         },
         async getAuthorId($message) {
             if (this._MessageAuthorCache.has($message)) {
@@ -609,7 +616,7 @@ const bot: BotManager = {
                                 syncUserInfo(user);
                             }
 
-                            bot.log.event(EVENTS.KAKERA, { user: user.username, amount: kakeraQuantity, type: kakeraType });
+                            bot.log.event(EVENTS.KAKERA, { user: user.username, amount: kakeraQuantity });
                         }
 
                         return;

@@ -11,12 +11,7 @@ export interface Stats {
     }
     steals: { character: string | null, user: string | null }[]
     kakera: {
-        perType: {
-            [kakeraInternalName: string]: number
-        }
-        amount: {
-            [username: string]: number
-        }
+        [username: string]: number
     }
 };
 
@@ -24,8 +19,5 @@ export const blankStats = (): Stats => ({
     characters: {},
     soulmates: {},
     steals: [],
-    kakera: {
-        perType: {},
-        amount: {}
-    }
+    kakera: {}
 });

@@ -20,19 +20,19 @@ function StatusPanel({ userStatus }: IStatusPanelProps) {
         lowestConsumption = Math.min(lowestConsumption, userinfo.get(USER_INFO.CONSUMPTION) as number);
         highestPower = Math.max(highestPower, userinfo.get(USER_INFO.POWER) as number);
 
-        /// Check for falsy local var so it doesnt get to read each user marry availability unnecessarily
+        /// Check for falsy local var (canClaimCharacter) so it doesnt get to read each user marry availability unnecessarily
         if (!canClaimCharacter && userinfo.get(USER_INFO.CAN_MARRY) as boolean) canClaimCharacter = true;
         if (!canRT && userinfo.get(USER_INFO.CAN_RT) as boolean) canRT = true;
     }
 
     return (
-        <div id="status-panel" style={{ "--user-count": 4 } as React.CSSProperties}>
-            <div className="status-outer">
+        <div id="status-panel" style={{ "--inner-rows-count": userStatus.size } as React.CSSProperties}>
+            <div className="row-outer">
                 <em>
                     <span>Rolls:</span>
                     <span>({totalRollsLeft}/{totalRollsMax})</span>
                 </em>
-                <div className="status-inner">
+                <div className="row-inner">
                     {
                         arrayUserStatus.map(([username, userinfo]) => {
                             const rollsLeft = userinfo.get(USER_INFO.ROLLS_LEFT) as number;
@@ -49,12 +49,12 @@ function StatusPanel({ userStatus }: IStatusPanelProps) {
                     }
                 </div>
             </div>
-            <div className="status-outer">
+            <div className="row-outer">
                 <em>
                     <span>Power Available:</span>
                     <span>↓ ${highestPower}%</span>
                 </em>
-                <div className="status-inner">
+                <div className="row-inner">
                     {
                         arrayUserStatus.map(([username, userinfo]) =>
                             <em key={`status-power-${username}`}>
@@ -65,12 +65,12 @@ function StatusPanel({ userStatus }: IStatusPanelProps) {
                     }
                 </div>
             </div>
-            <div className="status-outer">
+            <div className="row-outer">
                 <em>
                     <span>Power Consumption:</span>
                     <span>↑ {lowestConsumption}%</span>
                 </em>
-                <div className="status-inner">
+                <div className="row-inner">
                     {
                         arrayUserStatus.map(([username, userinfo]) =>
                             <em key={`status-consumption-${username}`}>
@@ -81,12 +81,12 @@ function StatusPanel({ userStatus }: IStatusPanelProps) {
                     }
                 </div>
             </div>
-            <div className="status-outer">
+            <div className="row-outer">
                 <em>
                     <span>Can Claim Characters:</span>
                     <span>{canClaimCharacter ? "Yes" : "No"}</span>
                 </em>
-                <div className="status-inner">
+                <div className="row-inner">
                     {
                         arrayUserStatus.map(([username, userinfo]) =>
                             <em key={`status-claim-${username}`}>
@@ -97,12 +97,12 @@ function StatusPanel({ userStatus }: IStatusPanelProps) {
                     }
                 </div>
             </div>
-            <div className="status-outer">
+            <div className="row-outer">
                 <em>
                     <span>Can RT:</span>
                     <span>{canRT ? "Yes" : "No"}</span>
                 </em>
-                <div className="status-inner">
+                <div className="row-inner">
                     {
                         arrayUserStatus.map(([username, userinfo]) =>
                             <em key={`status-rt-${username}`}>

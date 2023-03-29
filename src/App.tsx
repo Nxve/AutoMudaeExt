@@ -1,4 +1,4 @@
-import type { BotState, Preferences, PrefLanguage, PrefNotification, PrefNotificationType, PrefRollType, PrefUseUsers, UserInfo } from "./lib/bot";
+import type { BotState, Preferences, PrefLanguage, PrefNotification, PrefNotificationType, PrefRollType, PrefUseUsers } from "./lib/bot";
 import type { KAKERA } from "./lib/mudae";
 import type { MessageID, Message } from "./lib/messaging";
 import type { Logs, Unseen, LogType } from "./lib/bot/log";
@@ -11,7 +11,6 @@ import { BOT_STATES, NOTIFICATIONS, defaultPreferences } from "./lib/bot";
 import { MESSAGES } from "./lib/messaging";
 import { SVGS } from "./lib/svgs";
 import { KAKERAS } from "./lib/mudae";
-import debounce from "lodash/debounce";
 import InfoPanel from "./components/InfoPanel";
 import NavBar from "./components/NavBar";
 import React, { useCallback, useEffect, useState } from "react";
@@ -40,9 +39,7 @@ function App() {
 
   /// GUI
 
-  const isWide = (): boolean => {
-    return menuCategory === "bot" && (menuSubcategory === "tokenlist" || menuSubcategory === "kakera");
-  };
+  const isWide = menuCategory === "bot" && (menuSubcategory === "tokenlist" || menuSubcategory === "kakera");
 
   const tokenListAdd = () => {
     tokenList.push("");
@@ -237,6 +234,21 @@ function App() {
     }
   };
 
+  const handleWorkerData = (data?: { stats: Stats, logs: Logs, unseen: Unseen }) => {
+    if (!data) {
+      console.error("Couldn't retrieve data from worker.");
+      return;
+    }
+
+    setStats(data.stats);
+    setLogs(data.logs);
+    setUnseen(data.unseen);
+
+    if (infoPanel === "events" || infoPanel === "warns" || infoPanel === "errors") {
+      clearUnseen(infoPanel.slice(0, infoPanel.length - 1) as LogType);
+    }
+  };
+
   const handleExtensionMessage = (message: Message, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
     if (!Object.hasOwn(message, "id")) return;
 
@@ -253,56 +265,45 @@ function App() {
       case MESSAGES.BOT.ERROR:
       case MESSAGES.BOT.WARN:
       case MESSAGES.BOT.EVENT:
-        sendWorkerMessage(MESSAGES.APP.GET_EVENTS, null, (data?: { logs: Logs, unseen: Unseen }) => {
-          if (data) {
-            setLogs(data.logs);
-            setUnseen(data.unseen);
-
-            if (infoPanel === "events" || infoPanel === "warns" || infoPanel === "errors") {
-              clearUnseen(infoPanel.slice(0, infoPanel.length - 1) as LogType);
-            }
-          }
-        });
+        sendWorkerMessage(MESSAGES.APP.GET_EVERYTHING, null, handleWorkerData);
         break;
       default:
         break;
     }
   };
 
-  const handlePreferencesChange = useCallback(debounce(() => {
+  const savePreferences = () => {
+    const stringifiedPreferences = JSON.stringify(preferences, jsonMapSetReplacer);
+
     broadcastMessage(
       MESSAGES.APP.SYNC_PREFERENCES,
-      JSON.stringify(preferences, jsonMapSetReplacer),
-      (err?: Error) => { if (err) console.error(err) }
+      stringifiedPreferences,
+      (err?: Error) => { if (err) console.error("Couldn't sync preferences with some tabs", err) }
     );
 
-    chrome?.storage?.local.set({
-      preferences: JSON.stringify(preferences, jsonMapSetReplacer)
-    })
-      .catch(console.error);
-  }, 500, { leading: true }), []);
+    chrome?.storage?.local.set({ preferences: stringifiedPreferences })
+      .then(() => console.log("Saved preferences."))
+      .catch(err => console.error("Couldn't save preferences", err));
+  };
 
   useEffect(() => {
     /// Load preferences from Chrome's storage
     chrome?.storage?.local.get("preferences")
       .then(result => {
-        if (result && Object.hasOwn(result, "preferences") && result.preferences != null) {
-          const loadedPreferences = JSON.parse(result.preferences, jsonMapSetReviver);
-
-          setPreferences(loadedPreferences);
-          setTokenList([...loadedPreferences.tokenList]);
+        if (!Object.hasOwn(result, "preferences") || result.preferences == null) {
+          return;
         }
+
+        const loadedPreferences = JSON.parse(result.preferences, jsonMapSetReviver);
+
+        setPreferences(loadedPreferences);
+        setTokenList([...loadedPreferences.tokenList]);
+        console.log("Loaded preferences.", loadedPreferences);
       })
-      .catch(console.error)
+      .catch(err => console.error("Couldn't load preferences", err))
       .finally(() => setJustLoadedPreferences(true));
 
-    sendWorkerMessage(MESSAGES.APP.GET_EVERYTHING, null, (data?: { stats: Stats, logs: Logs, unseen: Unseen }) => {
-      if (data) {
-        setStats(data.stats)
-        setLogs(data.logs);
-        setUnseen(data.unseen)
-      }
-    });
+    sendWorkerMessage(MESSAGES.APP.GET_EVERYTHING, null, handleWorkerData);
 
     chrome?.tabs?.query({ url: "https://discord.com/channels/*", highlighted: true, currentWindow: true, status: "complete" })
       .then((tabs) => {
@@ -331,6 +332,7 @@ function App() {
     chrome?.runtime?.onMessage.addListener(handleExtensionMessage);
 
     setDidMount(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -342,7 +344,12 @@ function App() {
       return;
     }
 
-    handlePreferencesChange();
+    const tSavePreferences = setTimeout(() => {
+      savePreferences();
+    }, 250);
+
+    return () => clearTimeout(tSavePreferences);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preferences]);
 
   return (
@@ -350,7 +357,7 @@ function App() {
       {
         infoPanel !== null &&
         <div id="info-panel-wrapper">
-          <InfoPanel infoType={infoPanel} logs={logs} userStatus={userStatus} />
+          <InfoPanel infoType={infoPanel} logs={logs} userStatus={userStatus} stats={stats} />
         </div>
       }
       <main>
@@ -359,7 +366,7 @@ function App() {
           toggleInfoPanel={toggleInfoPanel}
           unseen={unseen}
         />
-        <section id="main-menu" {...isWide() && ({ className: "wide" })}>
+        <section id="main-menu" {...isWide && ({ className: "wide" })}>
           <header>
             <img src="128.png" alt="App Icon" />
             <span>AutoMudae</span>

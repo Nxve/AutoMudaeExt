@@ -47,47 +47,48 @@
     margin-right: .3rem;
 }
 
-/* Status */
+/* Status & Stats */
 
-#status-panel {
+#status-panel,
+#stats-panel {
     display: flex;
     flex-direction: column;
     gap: 5px;
 }
 
-.status-outer {
+.row-outer {
     color: var(--white-560);
     background-color: var(--primary-660);
     font-size: .9rem;
     padding: 3px;
 }
 
-.status-outer:hover {
+.row-outer:hover {
     color: var(--white-530);
     background-color: var(--primary-630);
 }
 
-.status-outer em {
+.row-outer em {
     display: flex;
     justify-content: space-between;
 }
 
-.status-outer em:not(:last-child) {
+.row-outer em:not(:last-child) {
     margin-bottom: 2px;
 }
 
-.status-inner {
+.row-inner {
     max-height: 0px;
     font-size: .8rem;
     overflow: hidden;
     transition: max-height 200ms ease;
 }
 
-.status-inner em {
+.row-inner em {
     padding: 1px;
     background-color: var(--primary-560);
 }
 
-.status-outer:hover .status-inner {
-    max-height: calc(1rem * var(--user-count));
+.row-outer:hover .row-inner {
+    max-height: calc(1rem * var(--inner-rows-count));
 }

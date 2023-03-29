@@ -105,10 +105,10 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
                         stats.steals.push({ character: stealCharacter || null, user: stealUser || null });
                         break;
                     case EVENTS.KAKERA:
-                        const { user: kakeraUser, amount: kakeraAmount, type: kakeraType } = message.data.content;
+                        const kakeraUser: string = message.data.content.user;
+                        const kakeraAmount: number = Number(message.data.content.amount);
 
-                        stats.kakera.perType[kakeraType] = Object.hasOwn(stats.kakera.perType, kakeraType) ? stats.kakera.perType[kakeraType] + 1 : 1;
-                        stats.kakera.amount[kakeraUser] = Object.hasOwn(stats.kakera.amount, kakeraUser) ? stats.kakera.amount[kakeraUser] + kakeraAmount : kakeraAmount;
+                        stats.kakera[kakeraUser] = (Object.hasOwn(stats.kakera, kakeraUser) ? stats.kakera[kakeraUser] + kakeraAmount : kakeraAmount);
                         break;
                     case EVENTS.SOULMATE:
                         const { character: soulmateCharacter, user: soulmateUser } = message.data.content;
@@ -135,15 +135,6 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
                 const unseen = await getUnseen();
 
                 sendResponse({ stats, logs, unseen });
-            })();
-
-            return true;
-        case MESSAGES.APP.GET_EVENTS:
-            (async () => {
-                const logs = await getLogs();
-                const unseen = await getUnseen();
-
-                sendResponse({ logs, unseen });
             })();
 
             return true;

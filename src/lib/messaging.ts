@@ -5,7 +5,6 @@ export const MESSAGES = {
         TOGGLE: "toggle",
         SYNC_PREFERENCES: "sync_preferences",
         GET_EVERYTHING: "get_everything",
-        GET_EVENTS: "get_logs",
         CLEAR_UNSEEN: "clear_unseen"
     },
     BOT: {

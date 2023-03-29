@@ -23,15 +23,11 @@ export const jsonMapSetReplacer = (_k: any, v: any) => {
     return v;
 }
 
-export const getLastFromArray = <T>(array: T[]): T => array[array.length - 1];
-
 export const pickRandom = <T>(arr: T[]): T => arr[arr.length * Math.random() | 0];
 
 export const minifyToken = (token: string): string => token.slice(0, 7) + "..." + token.slice(-7);
 
 export const randomFloat = (min: number, max: number, decimals: number): number => parseFloat((Math.random() * (max - min) + min).toFixed(decimals));
-
-export const clamp = (val: number, min: number, max: number): number => Math.min(Math.max(val, min), max);
 
 export const dateToHMS = (date: Date): string => date.toUTCString().split(" ")[4];
 
@@ -54,3 +50,5 @@ export const randomSessionID = (): string => {
 
     return output.join('');
 };
+
+export const reduceInnerArraysLength = (total: number, current: unknown[]) => total + current.length;

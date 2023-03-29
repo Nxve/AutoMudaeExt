@@ -73,7 +73,7 @@ export interface BotManager {
         _MessageAuthorCache: Map<HTMLElement, string | null>
         _fetch: (messageId: string) => Promise<DiscordMessage | null>
         get: (message: string | HTMLElement) => Promise<DiscordMessage | null>
-        getId: ($message: HTMLElement) => string
+        getId: ($message: HTMLElement) => string | undefined
         getAuthorId: ($message: HTMLElement) => Promise<string | null>
         isFromMudae: ($message: HTMLElement) => Promise<boolean>
         getBotUserWhoSent: ($message: HTMLElement) => Promise<BotUser | null>
