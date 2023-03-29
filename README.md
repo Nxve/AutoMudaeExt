@@ -6,7 +6,6 @@ It is still in early development, thus unavailable in webstore and not really fu
 You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
 #### Roadmap to get it working:
-- Stats
 - Notifications
     - Some of the events should trigger sound notifications
 - Option to watch for mentioned nicknames: sniping
@@ -25,7 +24,7 @@ You can expect it to be available for use after the completion of the below road
 
 
 #### Known bugs:
-- Sync preferences when first opening the app
+- Duplicated warn sometimes
 
 #### Secondary plans:
 - Styling:
