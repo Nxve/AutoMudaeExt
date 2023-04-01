@@ -226,6 +226,7 @@ export class BotUser {
     }
 
     async fetchNick(): Promise<void> {
+        //# Get guildId from manager
         const guildId = window.location.pathname.split("/")[2];
 
         let userData: any;
@@ -246,8 +247,8 @@ export class BotUser {
             throw Error(`Token [${minifyToken(this.token)}] must be a member of this guild`);
         }
 
-        const { guild_member: { nick } } = userData;
-        this.nick = nick;
+        /// Using username in case of null nick
+        this.nick = userData.guild_member.nick || userData.user.username;
     }
 
     hasNeededInfo(): boolean {
