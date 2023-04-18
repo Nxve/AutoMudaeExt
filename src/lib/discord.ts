@@ -34,7 +34,25 @@ export interface DiscordUser {
     display_name: string | null
     global_name: string | null
     public_flags: number
+    flags?: number
+    bio?: string
+    banner?: unknown | null
+    banner_color?: string
+    accent_color?: number
     bot?: boolean
+}
+
+export interface DiscordUserMe extends DiscordUser {
+    email: string
+    linked_users: unknown[]
+    locale: string
+    mfa_enabled: boolean
+    nsfw_allowed: boolean
+    phone: string
+    premium_type: number
+    premium_usage_flags: number
+    purchased_flags: number
+    verified: boolean
 }
 
 interface DiscordInteraction {
@@ -60,5 +78,5 @@ interface DiscordMessageComponent {
 }
 
 interface DiscordEmbed {
-    //# Not implemented
+    /// Not implemented
 }
