@@ -7,6 +7,9 @@ It is still in early development, thus unavailable in webstore.
 You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
 #### Roadmap to get it working:
+- In bot config:
+    - Prevent user from configuring kakera to a token that is already in `all`
+    - Display username/nick instead of tokens in kakera config (Get from cache or running bot)
 - Notifications
     - Some of the events should trigger sound notifications
 - Option to watch for mentioned nicknames: sniping
