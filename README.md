@@ -2,7 +2,6 @@
 Automates the use of Mudae bot in Discord. This is the Chrome Extension version of the discontinued [AutoMudae userscript](https://github.com/Nxve/AutoMudae).
 
 ## ⚠ Disclaimer
-#### Slowed development until end of April
 It is still in early development, thus unavailable in webstore.
 You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
@@ -13,11 +12,11 @@ You can expect it to be available for use after the completion of the below road
 - Notifications
     - Some of the events should trigger sound notifications
 - Option to watch for mentioned nicknames: sniping
-- Add to total claimed kakera those received from EMERALD IV reward
+- Kakera consumption should be halved for 10+ keys characters
+- Add to total claimed kakera those received from SILVER IV reward
 - Guild Config:
     - Option to get from `/server settings`
     - Adapt to guild prefix in typed commands, as `$tu`, `$dk`, `$us` and such
-    - Add other language support
 - Version control over preferences
 - Advise about it's requirements:
     - Maybe after installation, in a "guide" page
@@ -25,10 +24,6 @@ You can expect it to be available for use after the completion of the below road
         - Custom avatar for each user
         - Slash commands only
         - $tu exposing every needed info
-
-
-#### Known bugs:
-- Duplicated warn sometimes
 
 #### Secondary plans:
 - Styling:

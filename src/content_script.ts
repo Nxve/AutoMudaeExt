@@ -11,6 +11,7 @@ import { KAKERAS } from "./lib/mudae";
 import { jsonMapSetReplacer, jsonMapSetReviver, minifyToken, randomFloat, randomSessionID } from "./lib/utils";
 import { EVENTS } from "./lib/bot/event";
 import _ from "lodash";
+import { LANG } from "./lib/localization";
 
 const bot: BotManager = {
     state: "waiting_injection",
@@ -447,7 +448,7 @@ const bot: BotManager = {
 
                     if (command && mudaeResponse && mudaeResponse.startsWith(`${user.username}, `)) {
                         if (command === "$tu") {
-                            const matchRolls = /tem (\d+) rolls/.exec(mudaeResponse);
+                            const matchRolls = LANG[bot.preferences.language].regex.tu_rolls.exec(mudaeResponse);
                             if (matchRolls) {
                                 const rolls = Number(matchRolls[1]);
 
@@ -460,14 +461,14 @@ const bot: BotManager = {
                                 user.info.set(USER_INFO.ROLLS_LEFT, rolls);
                             }
 
-                            const matchRollsUs = /\(\+(\d+) \$us\)/.exec(mudaeResponse);
+                            const matchRollsUs = LANG[bot.preferences.language].regex.tu_rolls_us.exec(mudaeResponse);
                             if (matchRollsUs) {
                                 const rollsUs = Number(matchRollsUs[1]);
 
                                 user.info.set(USER_INFO.ROLLS_LEFT_US, rollsUs);
                             }
 
-                            const matchPower = /Power: (\d+)%/.exec(mudaeResponse);
+                            const matchPower = LANG[bot.preferences.language].regex.tu_power.exec(mudaeResponse);
                             if (matchPower) {
                                 const power = Number(matchPower[1]);
 
@@ -488,13 +489,13 @@ const bot: BotManager = {
                                 user.info.set(USER_INFO.CAN_RT, false);
                             }
 
-                            if (/casar/.test(mudaeResponse)) {
-                                const cantMarry = /se casar novamente (.+) min/.exec(mudaeResponse);
+                            if (LANG[bot.preferences.language].regex.tu_marry.test(mudaeResponse)) {
+                                const cantMarry = LANG[bot.preferences.language].regex.tu_cant_marry.exec(mudaeResponse);
 
                                 user.info.set(USER_INFO.CAN_MARRY, !cantMarry);
                             }
 
-                            const matchKakeraConsumption = /kakera consume (\d+)%/.exec(mudaeResponse);
+                            const matchKakeraConsumption = LANG[bot.preferences.language].regex.tu_kakera_consumption.exec(mudaeResponse);
 
                             if (matchKakeraConsumption) {
                                 const consumption = Number(matchKakeraConsumption[1]);
@@ -522,9 +523,9 @@ const bot: BotManager = {
                 const messageContent = $messageContent.innerText;
 
                 /// Handle character claims & steals
-                const characterClaimMatch = /(.+) e (.+) agora são casados!/.exec(messageContent.trim());
+                const characterClaimMatch = LANG[bot.preferences.language].regex.marry_notification.exec(messageContent.trim());
 
-                if (characterClaimMatch || messageContent.includes("(Silver IV Bônus)")) {
+                if (characterClaimMatch || messageContent.includes(LANG[bot.preferences.language].string.silver4Bonus)) {
                     let usernameThatClaimed: string | undefined
                     let characterName: string | undefined;
 
@@ -573,7 +574,7 @@ const bot: BotManager = {
                 }
 
                 /// Handle "no more rolls" messages
-                const noMoreRollsMatch = /(.+), os rolls são limitado/.exec(messageContent);
+                const noMoreRollsMatch = LANG[bot.preferences.language].regex.noMoreRolls.exec(messageContent);
 
                 if (noMoreRollsMatch) {
                     for (const botUser of bot.users) {
@@ -630,7 +631,9 @@ const bot: BotManager = {
             if ($imageWrapper) {
                 const $footer = $msg.querySelector("span[class^='embedFooterText']") as HTMLElement | null;
 
-                const isCharacterLookupMessage = ($footer && (/^\d+ \/ \d+$/.test($footer.innerText) || /^Pertence a .+ ~~ \d+ \/ \d+$/.test($footer.innerText)));
+                const isOwned = !!($footer && $footer.innerText.includes(LANG[bot.preferences.language].string.ownedCharacter));
+
+                const isCharacterLookupMessage = !!($footer && (/^\d+ \/ \d+$/.test($footer.innerText) || LANG[bot.preferences.language].regex.ownedLookup.test($footer.innerText)));
 
                 if (isCharacterLookupMessage) return;
 
@@ -661,13 +664,13 @@ const bot: BotManager = {
 
                         const $embedDescription = $msg.querySelector("div[class^='embedDescription']") as HTMLElement | null;
 
-                        if ($embedDescription && $embedDescription.innerText.includes("Sua nova ALMA")) {
+                        if ($embedDescription && $embedDescription.innerText.includes(LANG[bot.preferences.language].string.newSoulmate)) {
                             bot.log.event(EVENTS.SOULMATE, { character: characterName, user: user.username });
                         }
                     }
                 }
 
-                if (!$footer || !$footer.innerText.includes("Pertence")) {
+                if (!isOwned) {
                     let isThisInteresting = false;
 
                     const mentionedNicknames: string[] = [...$msg.querySelectorAll("span.mention")].map($mention => ($mention as HTMLElement).innerText.slice(1));
@@ -724,51 +727,49 @@ const bot: BotManager = {
                 }
 
                 /// Owned characters
-                if ($footer.innerText.includes("Pertence")) {
-                    const $kakeraImg: HTMLImageElement | null = $msg.querySelector("button img");
+                const $kakeraImg: HTMLImageElement | null = $msg.querySelector("button img");
 
-                    if ($kakeraImg) {
-                        const kakeraCode = $kakeraImg.alt;
-                        let kakeraToGet: KAKERA | undefined;
+                if ($kakeraImg) {
+                    const kakeraCode = $kakeraImg.alt;
+                    let kakeraToGet: KAKERA | undefined;
 
-                        for (const kakera of (bot.preferences.kakera.perToken.get("all") as Set<KAKERA>)) {
-                            if (KAKERAS[kakera].internalName === kakeraCode) {
-                                kakeraToGet = kakera;
-                                break;
+                    for (const kakera of (bot.preferences.kakera.perToken.get("all") as Set<KAKERA>)) {
+                        if (KAKERAS[kakera].internalName === kakeraCode) {
+                            kakeraToGet = kakera;
+                            break;
+                        }
+                    }
+
+                    for (const botUser of bot.users) {
+                        if (!kakeraToGet && bot.preferences.useUsers === "tokenlist") {
+                            for (const kakera of (bot.preferences.kakera.perToken.get(botUser.token) as Set<KAKERA>)) {
+                                if (KAKERAS[kakera].internalName === kakeraCode) {
+                                    kakeraToGet = kakera;
+                                    break;
+                                }
                             }
                         }
 
-                        for (const botUser of bot.users) {
-                            if (!kakeraToGet && bot.preferences.useUsers === "tokenlist") {
-                                for (const kakera of (bot.preferences.kakera.perToken.get(botUser.token) as Set<KAKERA>)) {
-                                    if (KAKERAS[kakera].internalName === kakeraCode) {
-                                        kakeraToGet = kakera;
-                                        break;
-                                    }
-                                }
-                            }
+                        if (kakeraToGet) {
+                            const powerCost = kakeraToGet === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
 
-                            if (kakeraToGet) {
-                                const powerCost = kakeraToGet === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
+                            if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
+                                let claimDelay = bot.preferences.kakera.delay;
 
-                                if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
-                                    let claimDelay = bot.preferences.kakera.delay;
+                                const thisClaim = () => {
+                                    botUser.pressMessageButton($msg)
+                                        .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
+                                };
 
-                                    const thisClaim = () => {
-                                        botUser.pressMessageButton($msg)
-                                            .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
-                                    };
+                                if (claimDelay > 0) {
+                                    if (bot.preferences.kakera.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
 
-                                    if (claimDelay > 0) {
-                                        if (bot.preferences.kakera.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
-
-                                        setTimeout(() => thisClaim(), claimDelay * 1000);
-                                        return;
-                                    }
-
-                                    thisClaim();
+                                    setTimeout(() => thisClaim(), claimDelay * 1000);
                                     return;
                                 }
+
+                                thisClaim();
+                                return;
                             }
                         }
                     }

@@ -2,19 +2,19 @@ import type { BotEvent } from "./bot/event";
 import { INTERVAL_SEND_MESSAGE, MUDAE_USER_ID } from "./consts";
 import { SVGS } from "./svgs";
 import { KAKERAS, SLASH_COMMANDS } from "./mudae";
-import { minifyToken } from "./utils";
+import { minifyToken, sleep } from "./utils";
 import type { DiscordMessage } from "./discord";
 
 export type PrefUseUsers = "logged" | "tokenlist";
 export type PrefRollType = "wx" | "wa" | "wg" | "hx" | "ha" | "hg";
 export type PrefNotificationType = "sound" | "popup" | "both";
 export type PrefNotification = keyof typeof NOTIFICATIONS;
-export type PrefLanguage = "en" | "fr" | "es" | "pt-br";
+export type PrefLanguage = "en" | "fr" | "es" | "pt_br";
 
 export interface Preferences {
     useUsers: PrefUseUsers;
     tokenList: Set<string>;
-    languague: PrefLanguage;
+    language: PrefLanguage;
     notifications: {
         type: PrefNotificationType
         enabled: Set<PrefNotification>
@@ -229,26 +229,40 @@ export class BotUser {
         //# Get guildId from manager
         const guildId = window.location.pathname.split("/")[2];
 
+        let nick: string = "";
         let userData: any;
 
-        try {
-            const response = await fetch(`https://discord.com/api/v9/users/${this.id}/profile?guild_id=${guildId}`, {
-                "headers": {
-                    "authorization": this.token
-                }
-            });
+        while (!nick){
+            try {
+                const response = await fetch(`https://discord.com/api/v9/users/${this.id}/profile?guild_id=${guildId}`, {
+                    "headers": {
+                        "authorization": this.token
+                    }
+                });
+    
+                userData = await response.json();
+            } catch (error: any) {
+                throw Error(`Couldn't fetch user nick for token [${minifyToken(this.token)}]: ${error.message}`);
+            }
 
-            userData = await response.json();
-        } catch (error: any) {
-            throw Error(`Couldn't fetch user nick for token [${minifyToken(this.token)}]: ${error.message}`);
+            /// Rate limited
+            if (Object.hasOwn(userData, "retry_after")){
+                const retryTime: number = userData.retry_after * 1000;
+
+                await sleep(retryTime);
+
+                continue;
+            }
+
+            if (!Object.hasOwn(userData, "guild_member")) {
+                throw Error(`Token [${minifyToken(this.token)}] must be a member of this guild`);
+            }
+
+            /// Using username in case of null nick
+            nick = userData.guild_member.nick || userData.user.username;
         }
 
-        if (!Object.hasOwn(userData, "guild_member")) {
-            throw Error(`Token [${minifyToken(this.token)}] must be a member of this guild`);
-        }
-
-        /// Using username in case of null nick
-        this.nick = userData.guild_member.nick || userData.user.username;
+        this.nick = nick;
     }
 
     hasNeededInfo(): boolean {
@@ -369,7 +383,7 @@ export class BotUser {
 export const defaultPreferences = (): Preferences => ({
     useUsers: "logged",
     tokenList: new Set(),
-    languague: "en",
+    language: "en",
     notifications: {
         type: "sound",
         enabled: new Set()

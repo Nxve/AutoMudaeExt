@@ -565,11 +565,11 @@ function App() {
             <>
               <div className="item-wrapper inner-0">
                 <span>Language</span>
-                <select value={preferences.languague} onChange={(e) => setPreferences({ ...preferences, languague: e.target.value as PrefLanguage })}>
+                <select value={preferences.language} onChange={(e) => setPreferences({ ...preferences, language: e.target.value as PrefLanguage })}>
                   <option value="en">English</option>
                   <option value="fr">Français</option>
                   <option value="es">Español</option>
-                  <option value="pt-br">Português</option>
+                  <option value="pt_br">Português</option>
                 </select>
               </div>
             </>

@@ -52,3 +52,5 @@ export const randomSessionID = (): string => {
 };
 
 export const reduceInnerArraysLength = (total: number, current: unknown[]) => total + current.length;
+
+export const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(() => resolve(), ms));
