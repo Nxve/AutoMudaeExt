@@ -731,7 +731,7 @@ const bot: BotManager = {
 
                 if ($kakeraImg) {
                     const kakeraCode = $kakeraImg.alt;
-                    let kakeraToGet: KAKERA | undefined;
+                    let kakeraToGet: KAKERA | null = null;
 
                     for (const kakera of (bot.preferences.kakera.perToken.get("all") as Set<KAKERA>)) {
                         if (KAKERAS[kakera].internalName === kakeraCode) {
@@ -771,6 +771,8 @@ const bot: BotManager = {
                                 thisClaim();
                                 return;
                             }
+
+                            kakeraToGet = null;
                         }
                     }
                 }
