@@ -9,26 +9,6 @@ import { EVENTS } from "./lib/bot/event";
 import { MESSAGES } from "./lib/messaging";
 import { dateToHMS } from "./lib/utils";
 
-const getStats = async (): Promise<Stats> => {
-    const result = await chrome.storage.session.get("stats");
-
-    return result.stats || blankStats();
-};
-
-const getLogs = async (): Promise<Logs> => {
-    const result = await chrome.storage.session.get("logs");
-
-    return result.logs || blankLogs();
-};
-
-const updateStats = async (cb: (stats: Stats) => Stats) => {
-    chrome.storage.session.set({ stats: cb(await getStats()) });
-};
-
-const updateLogs = async (cb: (logs: Logs) => Logs) => {
-    chrome.storage.session.set({ logs: cb(await getLogs()) });
-};
-
 const updateBadge = (unseen: Unseen) => {
     const count = unseen.error + unseen.warn + unseen.event;
 
@@ -43,10 +23,30 @@ const updateBadge = (unseen: Unseen) => {
     }
 };
 
+const getStats = async (): Promise<Stats> => {
+    const result = await chrome.storage.session.get("stats");
+
+    return result.stats || blankStats();
+};
+
+const getLogs = async (): Promise<Logs> => {
+    const result = await chrome.storage.session.get("logs");
+
+    return result.logs || blankLogs();
+};
+
 const getUnseen = async (): Promise<Unseen> => {
     const data = await chrome.storage.session.get("unseen");
 
     return data.unseen || blankUnseen();
+};
+
+const updateStats = async (cb: (stats: Stats) => Stats) => {
+    chrome.storage.session.set({ stats: cb(await getStats()) });
+};
+
+const updateLogs = async (cb: (logs: Logs) => Logs) => {
+    chrome.storage.session.set({ logs: cb(await getLogs()) });
 };
 
 const increaseUnseen = async (logType: LogType) => {
@@ -60,6 +60,16 @@ const clearUnseen = async (logType: LogType) => {
     const unseen = await getUnseen();
     unseen[logType] = 0;
     chrome.storage.session.set({ unseen }, () => updateBadge(unseen));
+};
+
+const storeUsernameForToken = async (username: string, token: string) => {
+    const result = await chrome.storage.local.get("usernames");
+
+    const usernames: { [token: string]: string } = result.usernames || {};
+
+    usernames[token] = username;
+
+    chrome.storage.local.set({ usernames });
 };
 
 chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
@@ -125,6 +135,11 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
 
             increaseUnseen(LOG_TYPES.EVENT);
             sendResponse();
+            break;
+        case MESSAGES.BOT.STORE_USERNAME:
+            const { username, token } = message.data as { username: string, token: string };
+
+            storeUsernameForToken(username, token);
             break;
         case MESSAGES.APP.GET_EVERYTHING:
             // chrome.notifications.create("", {type: "basic", title: "Test", message: "Msg", iconUrl: "../../128.png"});

@@ -11,7 +11,8 @@ export const MESSAGES = {
         WARN: "warn",
         ERROR: "error",
         EVENT: "event",
-        SYNC_USER_INFO: "sync_user_info"
+        SYNC_USER_INFO: "sync_user_info",
+        STORE_USERNAME: "store_username"
     },
 } as const;
 

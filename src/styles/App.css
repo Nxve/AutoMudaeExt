@@ -221,6 +221,10 @@ input[type=range]:focus {
   background-color: var(--green-400);
 }
 
+.tokenlist input[type=text] {
+  width: 100%;
+}
+
 /* Generic structures */
 
 header {
@@ -290,6 +294,45 @@ header span {
   }
 
   100% {
+    opacity: 1;
+  }
+}
+
+/* Rollup Text */
+
+[data-rollup-text] {
+  position: relative;
+}
+
+[data-rollup-text]:hover,
+[data-rollup-text]:hover:not(:focus-within)>* {
+  color: transparent;
+}
+
+[data-rollup-text]:hover:not(:focus-within)::after {
+  content: attr(data-rollup-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding-left: inherit;
+  color: var(--interactive-normal);
+  animation: swing-in-bottom-bck 0.6s cubic-bezier(0.175, 0.885, 0.320, 1.275) both;
+}
+
+[data-rollup-text]:has(input[type=text]):hover::after {
+  padding: 3px;
+}
+
+@keyframes swing-in-bottom-bck {
+  0% {
+    transform: rotateX(-70deg);
+    transform-origin: bottom;
+    opacity: 0;
+  }
+
+  100% {
+    transform: rotateX(0);
+    transform-origin: bottom;
     opacity: 1;
   }
 }

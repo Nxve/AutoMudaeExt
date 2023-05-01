@@ -290,6 +290,7 @@ const bot: BotManager = {
                 const user = new BotUser(bot, token);
 
                 await user.init();
+                storeUsernameForToken(user.username as string, user.token);
                 bot.users.add(user);
             }
 
@@ -315,6 +316,7 @@ const bot: BotManager = {
             const user = new BotUser(bot, token, id, username, avatar);
 
             await user.init();
+            storeUsernameForToken(user.username as string, user.token);
             bot.users.add(user);
         }
 
@@ -810,6 +812,10 @@ const syncUserInfo = (user: BotUser) => {
     chrome.runtime.sendMessage({ id: MESSAGES.BOT.SYNC_USER_INFO, data: stringifiedData });
 };
 
+const storeUsernameForToken = (username: string, token: string) => {
+    chrome.runtime.sendMessage({ id: MESSAGES.BOT.STORE_USERNAME, data: { username, token } });
+};
+
 const handleExtensionMessage = (message: Message, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
     if (!Object.hasOwn(message, "id")) return;
 
@@ -867,7 +873,7 @@ const handleExtensionMessage = (message: Message, _sender: chrome.runtime.Messag
             }
             break;
         case MESSAGES.APP.SYNC_PREFERENCES:
-            if (bot.state === "waiting_injection" || bot.state === "error" || bot.state === "injection_error" || bot.state === "unknown"){
+            if (bot.state === "waiting_injection" || bot.state === "error" || bot.state === "injection_error" || bot.state === "unknown") {
                 sendResponse();
                 return;
             }

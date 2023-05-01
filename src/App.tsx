@@ -23,6 +23,7 @@ function App() {
   const [infoPanel, setInfoPanel] = useState<InfoPanelType>(null);
   const [configuringKakeraPerToken, setConfiguringKakeraPerToken] = useState("");
   const [tokenList, setTokenList] = useState<string[]>([]);
+  const [usernames, setUsernames] = useState<{ [token: string]: string }>({});
   const [hasJustLoadedPreferences, setJustLoadedPreferences] = useState(false);
   const [didMount, setDidMount] = useState(false);
 
@@ -149,11 +150,18 @@ function App() {
   };
 
   const reset = () => {
-    setConfiguringKakeraPerToken("");
-    toggleMenuSubcategory();
     toggleMenuCategory();
+    toggleMenuSubcategory();
+    setConfiguringKakeraPerToken("");
     setPreferences(defaultPreferences());
     setTokenList([]);
+  };
+
+  const clearCache = () => {
+    toggleMenuCategory();
+    toggleMenuSubcategory();
+    setUsernames({});
+    chrome.storage.local.remove("usernames");
   };
 
   /// BOT
@@ -262,6 +270,14 @@ function App() {
           console.error("Error while sync user info:", error);
         }
         break;
+      case MESSAGES.BOT.STORE_USERNAME:
+        console.log("Received", message.data);
+        const { username, token } = message.data as { username: string, token: string };
+
+        usernames[token] = username;
+
+        setUsernames({...usernames});
+        break;
       case MESSAGES.BOT.ERROR:
       case MESSAGES.BOT.WARN:
       case MESSAGES.BOT.EVENT:
@@ -287,20 +303,23 @@ function App() {
   };
 
   useEffect(() => {
-    /// Load preferences from Chrome's storage
-    chrome?.storage?.local.get("preferences")
+    /// Load preferences & usernames from Chrome's storage
+    chrome?.storage?.local.get(["preferences", "usernames"])
       .then(result => {
-        if (!Object.hasOwn(result, "preferences") || result.preferences == null) {
-          return;
+        if (Object.hasOwn(result, "preferences")) {
+          const loadedPreferences: Preferences = JSON.parse(result.preferences, jsonMapSetReviver);
+
+          setPreferences(loadedPreferences);
+          setTokenList([...loadedPreferences.tokenList]);
+          console.log("Loaded preferences.", loadedPreferences);
         }
 
-        const loadedPreferences = JSON.parse(result.preferences, jsonMapSetReviver);
-
-        setPreferences(loadedPreferences);
-        setTokenList([...loadedPreferences.tokenList]);
-        console.log("Loaded preferences.", loadedPreferences);
+        if (Object.hasOwn(result, "usernames")) {
+          setUsernames(result.usernames);
+          console.log("Loaded usernames.", result.usernames);
+        }
       })
-      .catch(err => console.error("Couldn't load preferences", err))
+      .catch(err => console.error("Couldn't load preferences or usernames", err))
       .finally(() => setJustLoadedPreferences(true));
 
     sendWorkerMessage(MESSAGES.APP.GET_EVERYTHING, null, handleWorkerData);
@@ -413,9 +432,18 @@ function App() {
                   {
                     menuSubcategory === "tokenlist" &&
                     <div className="item-wrapper inner-1">
-                      <div className="list">
+                      <div className="list tokenlist">
                         {tokenList.map((token, i) =>
-                          <input type="text" spellCheck="false" value={token} onChange={(e) => { tokenList[i] = e.target.value; setTokenList([...tokenList]) }} onBlur={(e) => validateTokenInput(i, e.target.value)} key={`token-${i}`} />
+                          <div data-rollup-text={usernames[token]}>
+                            <input
+                              type="text"
+                              spellCheck="false"
+                              value={token}
+                              onChange={(e) => { tokenList[i] = e.target.value; setTokenList([...tokenList]) }}
+                              onBlur={(e) => validateTokenInput(i, e.target.value)}
+                              key={`token-${i}`}
+                            />
+                          </div>
                         )}
                       </div>
                     </div>
@@ -472,8 +500,8 @@ function App() {
                 <>
                   {(preferences.useUsers === "tokenlist" ? [...preferences.kakera.perToken.keys()] : ["all"]).map((token, i) =>
                     <div className="item-wrapper inner-1 kakera-cfg" key={`kkcfg-${i}`}>
-                      <span>
-                        {token === "all" ? "All users" : `${minifyToken(token)}`}</span>
+                      <span data-rollup-text={usernames[token] ? minifyToken(token) : null}>
+                        {token === "all" ? "All users" : `${usernames[token] || minifyToken(token)}`}</span>
                       <div className="flex-inline-wrapper">
                         {
                           configuringKakeraPerToken === token ?
@@ -583,9 +611,14 @@ function App() {
           </div>
           {
             menuCategory === "extra" &&
-            <div className="item-wrapper inner-0">
-              <button onClick={reset}>Reset all config</button>
-            </div>
+            <>
+              <div className="item-wrapper inner-0">
+                <button onClick={reset}>Reset all config</button>
+              </div>
+              <div className="item-wrapper inner-0">
+                <button onClick={clearCache}>Clear cache</button>
+              </div>
+            </>
           }
           {
             discordTab &&
