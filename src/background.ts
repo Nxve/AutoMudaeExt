@@ -8,6 +8,7 @@ import { blankStats } from "./lib/bot/status_stats";
 import { EVENTS } from "./lib/bot/event";
 import { MESSAGES } from "./lib/messaging";
 import { dateToHMS } from "./lib/utils";
+import { MUDAE_SILVERIV_KAKERA_BONUS } from "./lib/consts";
 
 const updateBadge = (unseen: Unseen) => {
     const count = unseen.error + unseen.warn + unseen.event;
@@ -119,6 +120,14 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
                         const kakeraAmount: number = Number(message.data.content.amount);
 
                         stats.kakera[kakeraUser] = (Object.hasOwn(stats.kakera, kakeraUser) ? stats.kakera[kakeraUser] + kakeraAmount : kakeraAmount);
+                        break;
+                    case EVENTS.KAKERA_SILVERIV:
+                        const silverIVUsernames: string[] = message.data.content;
+
+                        silverIVUsernames.forEach(username => {
+                            stats.kakera[username] = (Object.hasOwn(stats.kakera, username) ? stats.kakera[username] + MUDAE_SILVERIV_KAKERA_BONUS : MUDAE_SILVERIV_KAKERA_BONUS);
+                        });
+
                         break;
                     case EVENTS.SOULMATE:
                         const { character: soulmateCharacter, user: soulmateUser } = message.data.content;

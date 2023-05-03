@@ -6,12 +6,14 @@ import type { DiscordMessage } from "./lib/discord";
 import { DISCORD_INFO } from "./lib/bot";
 import { BotUser, USER_INFO } from "./lib/bot";
 import { INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID, INTERVAL_DONT_ROLL_AFTER_ACTIVITY } from "./lib/consts";
-import { MESSAGES } from "./lib/messaging";
+import { MESSAGES, ChromeMessageQueue } from "./lib/messaging";
 import { KAKERAS } from "./lib/mudae";
 import { jsonMapSetReplacer, jsonMapSetReviver, minifyToken, randomFloat, randomSessionID } from "./lib/utils";
 import { EVENTS } from "./lib/bot/event";
 import _ from "lodash";
 import { LANG } from "./lib/localization";
+
+const chromeMessageQueue = new ChromeMessageQueue();
 
 const bot: BotManager = {
     state: "waiting_injection",
@@ -30,13 +32,13 @@ const bot: BotManager = {
 
     log: {
         warn(message) {
-            chrome.runtime.sendMessage({ id: MESSAGES.BOT.WARN, data: message });
+            chromeMessageQueue.sendMessage({ id: MESSAGES.BOT.WARN, data: message });
         },
         error(message, isCritical) {
-            chrome.runtime.sendMessage({ id: MESSAGES.BOT.ERROR, data: { message, isCritical } });
+            chromeMessageQueue.sendMessage({ id: MESSAGES.BOT.ERROR, data: { message, isCritical } });
         },
         event(eventType, content) {
-            chrome.runtime.sendMessage({ id: MESSAGES.BOT.EVENT, data: { eventType, content } });
+            chromeMessageQueue.sendMessage({ id: MESSAGES.BOT.EVENT, data: { eventType, content } });
         },
     },
 
@@ -528,48 +530,82 @@ const bot: BotManager = {
                 const characterClaimMatch = LANG[bot.preferences.language].regex.marry_notification.exec(messageContent.trim());
 
                 if (characterClaimMatch || messageContent.includes(LANG[bot.preferences.language].string.silver4Bonus)) {
-                    let usernameThatClaimed: string | undefined
+                    let usernameThatClaimed: string | undefined;
                     let characterName: string | undefined;
+                    let botUserThatClaimed: BotUser | null = null;
 
                     if (characterClaimMatch) {
                         usernameThatClaimed = characterClaimMatch[1];
                         characterName = characterClaimMatch[2];
+
+                        if (usernameThatClaimed) {
+                            botUserThatClaimed = bot.getUserWithCriteria((user) => user.username === usernameThatClaimed);
+                        }
                     }
 
-                    const user = bot.getUserWithCriteria((user) => user.username != null && user.username === usernameThatClaimed);
+                    /// Claim & Kakera bonuses
+                    if (botUserThatClaimed) {
+                        botUserThatClaimed.info.set(USER_INFO.CAN_MARRY, false);
 
-                    /// Claim
-                    if (user) {
-                        user.info.set(USER_INFO.CAN_MARRY, false);
-                        syncUserInfo(user);
+                        let kakeraFromBonuses: number = 0;
 
-                        bot.log.event(EVENTS.CLAIM, { user: user.username, character: characterName });
+                        const matchKakeraFromBronzeIV = /\n\+(\d+)\s\(.*Bronze IV.*\)/.exec(messageContent);
+                        const matchKakeraFromEmeraldIV = /\n\+(\d+)\(.*Emerald IV.*\)/.exec(messageContent);
+
+                        if (matchKakeraFromBronzeIV) {
+                            const kakeraFromBronzeIV: number = Number(matchKakeraFromBronzeIV[1]);
+
+                            kakeraFromBonuses += kakeraFromBronzeIV;
+                        }
+
+                        if (matchKakeraFromEmeraldIV) {
+                            const kakeraFromEmeraldIV: number = Number(matchKakeraFromEmeraldIV[1]);
+
+                            kakeraFromBonuses += kakeraFromEmeraldIV;
+                        }
+
+                        //# Remove this silent property or make it useful
+                        bot.log.event(EVENTS.KAKERA, { user: usernameThatClaimed, amount: kakeraFromBonuses, silent: true });
+                        bot.log.event(EVENTS.CLAIM, { user: usernameThatClaimed, character: characterName });
+
+                        syncUserInfo(botUserThatClaimed);
                         //# beep
-                    } else {
-                        const $mentions = $msg.querySelectorAll("span.mention");
+                    }
 
-                        let isIncludingMe = false;
+                    const $mentions = $msg.querySelectorAll("span.mention");
+                    const botUsers = new Set(bot.users);
+                    const mentionedBotUsernames: string[] = [];
 
-                        for (let i = 0; i < $mentions.length; i++) {
-                            const mentionedNick = ($mentions[i] as HTMLElement).innerText.slice(1);
+                    let isMentioningMe = false;
 
-                            for (const botUser of bot.users) {
-                                if (botUser.nick === mentionedNick) {
-                                    isIncludingMe = true;
-                                    break;
-                                }
+                    for (let i = 0; i < $mentions.length; i++) {
+                        const mentionedNick = ($mentions[i] as HTMLSpanElement).innerText.slice(1);
+
+                        for (const botUser of botUsers) {
+                            if (botUser.nick === mentionedNick) {
+                                isMentioningMe = true;
+
+                                botUsers.delete(botUser);
+
+                                mentionedBotUsernames.push(botUser.username as string);
+                                break;
                             }
                         }
+                    }
 
-                        /// Steal
-                        if (isIncludingMe) {
-                            const stealMessage = characterClaimMatch
-                                ? `User ${usernameThatClaimed} claimed ${characterName} wished by you.`
-                                : "A character wished by you was claimed by another user.";
+                    /// Silver IV bonus kakera
+                    if (mentionedBotUsernames.length > 0) {
+                        bot.log.event(EVENTS.KAKERA_SILVERIV, mentionedBotUsernames);
+                    }
 
-                            bot.log.event(EVENTS.STEAL, { user: usernameThatClaimed, character: characterName });
-                            bot.log.warn(stealMessage);
-                        }
+                    /// Steal
+                    if (isMentioningMe && !botUserThatClaimed) {
+                        const stealMessage = characterClaimMatch
+                            ? `User ${usernameThatClaimed} claimed ${characterName} wished by you.`
+                            : "A character wished by you was claimed by another user.";
+
+                        bot.log.event(EVENTS.STEAL, { user: usernameThatClaimed, character: characterName });
+                        bot.log.warn(stealMessage);
                     }
 
                     return;
@@ -648,6 +684,7 @@ const bot: BotManager = {
 
                 const interactionUserId = await bot.message.getInteractionUserId($msg);
 
+                /// Decreases rolls count && handle new soulmates
                 if (interactionUserId) {
                     const user = bot.getUserWithCriteria(user => user.id === interactionUserId);
 
@@ -672,6 +709,7 @@ const bot: BotManager = {
                     }
                 }
 
+                /// Check if should try to claim
                 if (!isOwned) {
                     let isThisInteresting = false;
 
@@ -743,17 +781,19 @@ const bot: BotManager = {
                     }
 
                     for (const botUser of bot.users) {
-                        if (!kakeraToGet && bot.preferences.useUsers === "tokenlist") {
+                        let kakeraToGetPerUser = kakeraToGet;
+
+                        if (!kakeraToGetPerUser && bot.preferences.useUsers === "tokenlist") {
                             for (const kakera of (bot.preferences.kakera.perToken.get(botUser.token) as Set<KAKERA>)) {
                                 if (KAKERAS[kakera].internalName === kakeraCode) {
-                                    kakeraToGet = kakera;
+                                    kakeraToGetPerUser = kakera;
                                     break;
                                 }
                             }
                         }
 
-                        if (kakeraToGet) {
-                            const powerCost = kakeraToGet === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
+                        if (kakeraToGetPerUser) {
+                            const powerCost: number = kakeraToGetPerUser === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
 
                             if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
                                 let claimDelay = bot.preferences.kakera.delay;
@@ -773,8 +813,6 @@ const bot: BotManager = {
                                 thisClaim();
                                 return;
                             }
-
-                            kakeraToGet = null;
                         }
                     }
                 }
@@ -809,11 +847,11 @@ const syncUserInfo = (user: BotUser) => {
     const userInfoData = { username: user.username, userinfo: user.info };
     const stringifiedData = JSON.stringify(userInfoData, jsonMapSetReplacer);
 
-    chrome.runtime.sendMessage({ id: MESSAGES.BOT.SYNC_USER_INFO, data: stringifiedData });
+    chromeMessageQueue.sendMessage({ id: MESSAGES.BOT.SYNC_USER_INFO, data: stringifiedData });
 };
 
 const storeUsernameForToken = (username: string, token: string) => {
-    chrome.runtime.sendMessage({ id: MESSAGES.BOT.STORE_USERNAME, data: { username, token } });
+    chromeMessageQueue.sendMessage({ id: MESSAGES.BOT.STORE_USERNAME, data: { username, token } });
 };
 
 const handleExtensionMessage = (message: Message, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {

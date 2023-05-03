@@ -1,41 +1,49 @@
 import type { BotLog, ErrorLog, EventLog, WarnLog } from "../lib/bot/log";
 import { LOG_TYPES } from "../lib/bot/log";
 import { EVENTS } from "../lib/bot/event";
+import { MUDAE_SILVERIV_KAKERA_BONUS } from "../lib/consts";
 
 //# Add icons, colors and such (Kakera type as icon)
 function EventContent({ eventLog }: { eventLog: EventLog }) {
     if (eventLog.content.eventType === EVENTS.CLAIM) {
         const { character, user } = eventLog.content.eventData;
         return (
-            <span>{user} claimed {character}</span>
+            <span>{`${user} claimed ${character}`}</span>
         )
     }
 
     if (eventLog.content.eventType === EVENTS.FOUND_CHARACTER) {
         const { character } = eventLog.content.eventData;
         return (
-            <span>Character found: {character}</span>
+            <span>{`Character found: ${character}`}</span>
         )
     }
 
     if (eventLog.content.eventType === EVENTS.KAKERA) {
         const { user, amount, type } = eventLog.content.eventData;
         return (
-            <span>{user} obtained {amount} kakera</span>
+            <span>{`${user} obtained ${amount} kakera`}</span>
         )
     }
 
     if (eventLog.content.eventType === EVENTS.SOULMATE) {
         const { character, user } = eventLog.content.eventData;
         return (
-            <span>{user}'s new soulmate: {character}</span>
+            <span>{`${user}'s new soulmate: ${character}`}</span>
         )
     }
 
     if (eventLog.content.eventType === EVENTS.STEAL) {
         const { character, user } = eventLog.content.eventData;
         return (
-            <span>{character} was stolen by {user}</span>
+            <span>{`${character} was stolen by ${user}`}</span>
+        )
+    }
+
+    if (eventLog.content.eventType === EVENTS.KAKERA_SILVERIV) {
+        const silverIVUsernames: string[] = eventLog.content.eventData;
+        return (
+            <span>{`${silverIVUsernames.join(", ")} obtained ${MUDAE_SILVERIV_KAKERA_BONUS} kakera${silverIVUsernames.length > 0 ? " each" : ""} from Silver IV bonus`}</span>
         )
     }
 

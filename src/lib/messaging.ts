@@ -22,3 +22,28 @@ export interface Message {
     id: MessageID
     data?: any
 };
+
+export class ChromeMessageQueue {
+    private messages: Message[] = [];
+    private isRunning: boolean = false;
+
+    private async run() {
+        this.isRunning = true;
+
+        while (this.messages.length > 0) {
+            const message = this.messages.shift() as Message;
+
+            await chrome.runtime.sendMessage<Message>(message);
+        }
+
+        this.isRunning = false;
+    }
+
+    public sendMessage(message: Message) {
+        this.messages.push(message);
+
+        if (!this.isRunning){
+            this.run();
+        }
+    }
+}
