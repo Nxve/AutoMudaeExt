@@ -6,14 +6,15 @@ It is still in early development, thus unavailable in webstore.
 You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
 #### Roadmap to get it working:
+- Option to watch for mentioned nicknames: sniping
+- Replace use of `$tu` with `/tu`
 - Notifications
     - Some of the events should trigger sound notifications
-- Option to watch for mentioned nicknames: sniping
 - Kakera consumption should be halved for 10+ keys characters
-- Add to total claimed kakera those received from SILVER IV reward
 - Guild Config:
     - Option to get from `/server settings`
     - Adapt to guild prefix in typed commands, as `$tu`, `$dk`, `$us` and such
+        - Instead, use slash commands to everything
 - Version control over preferences
 - Advise about it's requirements:
     - Maybe after installation, in a "guide" page
