@@ -716,7 +716,7 @@ const bot: BotManager = {
                     const mentionedNicknames: string[] = [...$msg.querySelectorAll("span.mention")].map($mention => ($mention as HTMLElement).innerText.slice(1));
 
                     for (const mentionedNick of mentionedNicknames) {
-                        if (bot.getUserWithCriteria(user => user.nick === mentionedNick)) {
+                        if (bot.preferences.snipeList.has(mentionedNick) || bot.getUserWithCriteria(user => user.nick === mentionedNick)) {
                             isThisInteresting = true;
                             break;
                         }

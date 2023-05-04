@@ -6,11 +6,10 @@ It is still in early development, thus unavailable in webstore.
 You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
 #### Roadmap to get it working:
-- Option to watch for mentioned nicknames: sniping
+- Merge kakera from bonuses with character claim event
 - Replace use of `$tu` with `/tu`
 - Notifications
     - Some of the events should trigger sound notifications
-- Kakera consumption should be halved for 10+ keys characters
 - Guild Config:
     - Option to get from `/server settings`
     - Adapt to guild prefix in typed commands, as `$tu`, `$dk`, `$us` and such

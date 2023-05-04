@@ -221,7 +221,7 @@ input[type=range]:focus {
   background-color: var(--green-400);
 }
 
-.tokenlist input[type=text] {
+#tokenlist input[type=text] {
   width: 100%;
 }
 

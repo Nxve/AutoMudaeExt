@@ -15,6 +15,7 @@ import InfoPanel from "./components/InfoPanel";
 import NavBar from "./components/NavBar";
 import React, { useCallback, useEffect, useState } from "react";
 import "./styles/App.css";
+import { DISCORD_NICK_MAX, DISCORD_NICK_MIN } from "./lib/consts";
 
 function App() {
   /// App state
@@ -23,6 +24,7 @@ function App() {
   const [infoPanel, setInfoPanel] = useState<InfoPanelType>(null);
   const [configuringKakeraPerToken, setConfiguringKakeraPerToken] = useState("");
   const [tokenList, setTokenList] = useState<string[]>([]);
+  const [snipeList, setSnipeList] = useState<string[]>([]);
   const [usernames, setUsernames] = useState<{ [token: string]: string }>({});
   const [hasJustLoadedPreferences, setJustLoadedPreferences] = useState(false);
   const [didMount, setDidMount] = useState(false);
@@ -63,12 +65,55 @@ function App() {
       }
     } else {
       const arrTokenList = [...preferences.tokenList];
-      arrTokenList.splice(index, 1, isValid ? token : undefined as unknown as string);
-      preferences.tokenList = new Set([...arrTokenList]);
+
+      if (isValid){
+        arrTokenList.splice(index, 1, token);
+      } else {
+        arrTokenList.splice(index, 1);
+      }
+
+      preferences.tokenList = new Set(arrTokenList);
       setPreferences({ ...preferences });
     }
 
     setTokenList([...preferences.tokenList]);
+  };
+
+  const snipeListAdd = () => {
+    snipeList.push("");
+    setSnipeList([...snipeList]);
+  };
+
+  const snipeListClear = () => {
+    preferences.snipeList = new Set();
+    setPreferences({ ...preferences });
+    setSnipeList([]);
+  };
+
+  const validateSnipeInput = (index: number, nick: string) => {
+    nick = nick.trim();
+
+    const isValid = nick.length >= DISCORD_NICK_MIN && nick.length <= DISCORD_NICK_MAX;
+
+    if (index >= preferences.snipeList.size) {
+      if (isValid) {
+        preferences.snipeList.add(nick);
+        setPreferences({ ...preferences });
+      }
+    } else {
+      const arrSnipeList = [...preferences.snipeList];
+
+      if (isValid){
+        arrSnipeList.splice(index, 1, nick);
+      } else {
+        arrSnipeList.splice(index, 1);
+      }
+
+      preferences.snipeList = new Set(arrSnipeList);
+      setPreferences({ ...preferences });
+    }
+
+    setSnipeList([...preferences.snipeList]);
   };
 
   const handleSoundToggle: React.ChangeEventHandler<HTMLInputElement> = (e) => {
@@ -155,6 +200,7 @@ function App() {
     setConfiguringKakeraPerToken("");
     setPreferences(defaultPreferences());
     setTokenList([]);
+    setSnipeList([]);
   };
 
   const clearCache = () => {
@@ -276,7 +322,7 @@ function App() {
 
         usernames[token] = username;
 
-        setUsernames({...usernames});
+        setUsernames({ ...usernames });
         break;
       case MESSAGES.BOT.ERROR:
       case MESSAGES.BOT.WARN:
@@ -311,6 +357,7 @@ function App() {
 
           setPreferences(loadedPreferences);
           setTokenList([...loadedPreferences.tokenList]);
+          setSnipeList([...loadedPreferences.snipeList]);
           console.log("Loaded preferences.", loadedPreferences);
         }
 
@@ -432,7 +479,7 @@ function App() {
                   {
                     menuSubcategory === "tokenlist" &&
                     <div className="item-wrapper inner-1">
-                      <div className="list tokenlist">
+                      <div id="tokenlist" className="list">
                         {tokenList.map((token, i) =>
                           <div data-rollup-text={usernames[token]}>
                             <input
@@ -548,6 +595,44 @@ function App() {
                   </div>
                 </>
               }
+              <>
+                <div className="item-wrapper inner-0">
+                  <span>Snipe targets</span>
+                  <div className="flex-inline-wrapper">
+                    {
+                      menuSubcategory === "snipe" &&
+                      <>
+                        <button className="button-red" data-tooltip="Clear" onClick={snipeListClear}>
+                          {SVGS.X}
+                        </button>
+                        <button className="button-green" data-tooltip="Add" onClick={snipeListAdd}>
+                          {SVGS.PLUS}
+                        </button>
+                      </>
+                    }
+                    <button {...(menuSubcategory === "snipe" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("snipe")}>
+                      {SVGS.ARROW}
+                    </button>
+                  </div>
+                </div>
+                {
+                  menuSubcategory === "snipe" &&
+                  <div className="item-wrapper inner-1">
+                    <div className="list">
+                      {snipeList.map((nick, i) =>
+                        <input
+                          type="text"
+                          spellCheck="false"
+                          value={nick}
+                          onChange={(e) => { snipeList[i] = e.target.value; setSnipeList([...snipeList]) }}
+                          onBlur={(e) => validateSnipeInput(i, e.target.value)}
+                          key={`snipenick-${i}`}
+                        />
+                      )}
+                    </div>
+                  </div>
+                }
+              </>
               <div className="item-wrapper inner-0">
                 <span>Notifications</span>
                 <button {...(menuSubcategory === "notifications" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("notifications")}>

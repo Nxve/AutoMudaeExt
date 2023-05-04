@@ -4,3 +4,5 @@ export const INTERVAL_THINK = 200;
 export const INTERVAL_ROLL = 1500;
 export const INTERVAL_DONT_ROLL_AFTER_ACTIVITY = 2000;
 export const MUDAE_SILVERIV_KAKERA_BONUS = 200;
+export const DISCORD_NICK_MIN = 1;
+export const DISCORD_NICK_MAX = 32;

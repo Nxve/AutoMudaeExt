@@ -14,6 +14,7 @@ export type PrefLanguage = "en" | "fr" | "es" | "pt_br";
 export interface Preferences {
     useUsers: PrefUseUsers;
     tokenList: Set<string>;
+    snipeList: Set<string>;
     language: PrefLanguage;
     notifications: {
         type: PrefNotificationType
@@ -383,6 +384,7 @@ export class BotUser {
 export const defaultPreferences = (): Preferences => ({
     useUsers: "logged",
     tokenList: new Set(),
+    snipeList: new Set(),
     language: "en",
     notifications: {
         type: "sound",
