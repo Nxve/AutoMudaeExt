@@ -6,9 +6,9 @@ import { MUDAE_SILVERIV_KAKERA_BONUS } from "../lib/consts";
 //# Add icons, colors and such (Kakera type as icon)
 function EventContent({ eventLog }: { eventLog: EventLog }) {
     if (eventLog.content.eventType === EVENTS.CLAIM) {
-        const { character, user } = eventLog.content.eventData;
+        const { character, user, kakera } = eventLog.content.eventData;
         return (
-            <span>{`${user} claimed ${character}`}</span>
+            <span>{`${user} claimed ${character}${kakera > 0 ? ` (+${kakera} kakera)` : ""}`}</span>
         )
     }
 

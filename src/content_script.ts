@@ -564,9 +564,7 @@ const bot: BotManager = {
                             kakeraFromBonuses += kakeraFromEmeraldIV;
                         }
 
-                        //# Remove this silent property or make it useful
-                        bot.log.event(EVENTS.KAKERA, { user: usernameThatClaimed, amount: kakeraFromBonuses, silent: true });
-                        bot.log.event(EVENTS.CLAIM, { user: usernameThatClaimed, character: characterName });
+                        bot.log.event(EVENTS.CLAIM, { user: usernameThatClaimed, character: characterName, kakera: kakeraFromBonuses });
 
                         syncUserInfo(botUserThatClaimed);
                         //# beep
@@ -758,6 +756,8 @@ const bot: BotManager = {
                             if (!claimDelay) return thisClaim();
 
                             setTimeout(() => thisClaim(), 2905 + Math.max(claimDelay - 2905, 0));
+
+                            return;
                         }
 
                         bot.log.warn(`Can't claim character ${characterName} right now.`); //# Add reference to character message

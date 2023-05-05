@@ -6,7 +6,6 @@ It is still in early development, thus unavailable in webstore.
 You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
 #### Roadmap to get it working:
-- Merge kakera from bonuses with character claim event
 - Replace use of `$tu` with `/tu`
 - Notifications
     - Some of the events should trigger sound notifications

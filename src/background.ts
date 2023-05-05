@@ -105,10 +105,16 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
             updateStats(stats => {
                 switch (message.data.eventType as BotEvent) {
                     case EVENTS.CLAIM:
-                        const { character: claimCharacter, user: claimUser } = message.data.content;
+                        const claimUsername: string = message.data.content.user;
+                        const claimCharacter: string = message.data.content.character;
+                        const claimKakera: number = message.data.content.kakera;
 
-                        stats.characters[claimUser] ??= [];
-                        stats.characters[claimUser].push(claimCharacter);
+                        stats.characters[claimUsername] ??= [];
+                        stats.characters[claimUsername].push(claimCharacter);
+
+                        if (claimKakera > 0) {
+                            stats.kakera[claimUsername] = Object.hasOwn(stats.kakera, claimUsername) ? stats.kakera[claimUsername] + claimKakera : claimKakera;
+                        }
                         break;
                     case EVENTS.STEAL:
                         const { character: stealCharacter, user: stealUser } = message.data.content;
@@ -119,7 +125,7 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
                         const kakeraUser: string = message.data.content.user;
                         const kakeraAmount: number = Number(message.data.content.amount);
 
-                        stats.kakera[kakeraUser] = (Object.hasOwn(stats.kakera, kakeraUser) ? stats.kakera[kakeraUser] + kakeraAmount : kakeraAmount);
+                        stats.kakera[kakeraUser] = Object.hasOwn(stats.kakera, kakeraUser) ? stats.kakera[kakeraUser] + kakeraAmount : kakeraAmount;
                         break;
                     case EVENTS.KAKERA_SILVERIV:
                         const silverIVUsernames: string[] = message.data.content;
