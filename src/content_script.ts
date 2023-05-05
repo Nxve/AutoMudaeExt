@@ -4,7 +4,7 @@ import type { KAKERA } from "./lib/mudae";
 import type { UserStatus } from "./lib/bot/status_stats";
 import type { DiscordMessage } from "./lib/discord";
 import { DISCORD_INFO } from "./lib/bot";
-import { BotUser, USER_INFO } from "./lib/bot";
+import { BotUser, USER_INFO, ROLL_TYPES } from "./lib/bot";
 import { INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID, INTERVAL_DONT_ROLL_AFTER_ACTIVITY } from "./lib/consts";
 import { MESSAGES, ChromeMessageQueue } from "./lib/messaging";
 import { KAKERAS } from "./lib/mudae";
@@ -149,27 +149,21 @@ const bot: BotManager = {
 
             return (messageAuthorId != null && messageAuthorId === MUDAE_USER_ID);
         },
-        async getBotUserWhoSent($message) {
-            const messageAuthorId = await this.getAuthorId($message);
-
-            if (!messageAuthorId) return null;
-
-            for (const botUser of bot.users) {
-                if (botUser.id === messageAuthorId) return botUser;
-            }
-
-            return null;
-        },
-        async getInteractionUserId($message) {
+        async getInteractionInfo($message) {
             const $avatar = $message.querySelector("img[class^='executedCommandAvatar']") as HTMLImageElement | null;
+            const $commandName = $message.querySelector("[class^='commandName']") as HTMLDivElement | null;
 
-            if ($avatar) {
-                const match = /avatars\/(\d+)\//.exec($avatar.src);
-
-                if (match) return match[1];
+            if (!$avatar || !$commandName) {
+                return null;
             }
 
-            return null;
+            const match = /avatars\/(\d+)\//.exec($avatar.src);
+
+            if (!match || !$commandName.innerText) {
+                return null;
+            };
+
+            return { userId: match[1], command: $commandName.innerText.slice(1) };
         },
     },
 
@@ -370,7 +364,7 @@ const bot: BotManager = {
 
             for (const botUser of bot.users) {
                 if (!botUser.hasNeededInfo()) {
-                    botUser.sendChannelMessage("$tu")
+                    botUser.send.tu()
                         .catch(err => bot.log.error(`User ${botUser.username} couldn't send a channel message: ${err.message}`, false));
                     break;
                 }
@@ -380,37 +374,43 @@ const bot: BotManager = {
             return;
         }
 
-        const userWithRolls = bot.getUserWithCriteria(user => {
-            const rollsLeft = user.info.get(USER_INFO.ROLLS_LEFT) as number;
-            const rollsLeftUs = user.info.get(USER_INFO.ROLLS_LEFT_US) as number | undefined;
-            const totalRollsLeft = rollsLeft + (rollsLeftUs || 0);
-
-            return totalRollsLeft > 0;
-        });
-
         const isRollEnabled = bot.preferences.roll.enabled;
 
         if (isRollEnabled) {
-            if (userWithRolls && now - bot.lastSeenMessageTime > INTERVAL_DONT_ROLL_AFTER_ACTIVITY && now - bot.cdRoll > INTERVAL_ROLL) {
-                userWithRolls.roll()
-                    .catch(err => bot.log.error(`User ${userWithRolls.username} couldn't roll: ${err.message}`, false))
+            const canRollNow = now - bot.lastSeenMessageTime > INTERVAL_DONT_ROLL_AFTER_ACTIVITY && now - bot.cdRoll > INTERVAL_ROLL;
+
+            if (!canRollNow) return;
+
+            const userWithRolls = bot.getUserWithCriteria(user => {
+                const rollsLeft = user.info.get(USER_INFO.ROLLS_LEFT) as number;
+                const rollsLeftUs = user.info.get(USER_INFO.ROLLS_LEFT_US) as number | undefined;
+                const totalRollsLeft = rollsLeft + (rollsLeftUs || 0);
+
+                return totalRollsLeft > 0;
+            });
+
+            if (userWithRolls) {
                 bot.cdRoll = now;
-            }
-        }
 
-        if ((!isRollEnabled || (isRollEnabled && !userWithRolls)) && m > 38 && bot.isLastReset() && bot.getMarriageableUser()) {
-            const currentResetHash = `${dateNow.toDateString()} ${h}`;
+                userWithRolls.send.roll()
+                    .catch(err => bot.log.error(`User ${userWithRolls.username} couldn't roll: ${err.message}`, false))
 
-            if (bot.lastResetHash !== currentResetHash) {
-                bot.lastResetHash = currentResetHash;
-
-                //# if isRollEnabled auto-use $us or $rolls
-
-                bot.log.warn("You have no more rolls, can still marry and it's the last reset.");
+                return;
             }
 
-        }
+            if (m > 38 && bot.isLastReset() && bot.getMarriageableUser()) {
+                const currentResetHash = `${dateNow.toDateString()} ${h}`;
 
+                if (bot.lastResetHash !== currentResetHash) {
+                    bot.lastResetHash = currentResetHash;
+
+                    //# if isRollEnabled auto-use $us or $rolls
+
+                    bot.log.warn("You have no more rolls, can still marry and it's the last reset.");
+                }
+
+            }
+        }
     },
 
     handleHourlyReset() {
@@ -432,100 +432,254 @@ const bot: BotManager = {
             const $msg = _node as HTMLElement;
 
             if ($msg.tagName !== "LI") return;
+
             bot.lastSeenMessageTime = performance.now();
 
             if (!await bot.message.isFromMudae($msg)) return;
 
-            const $previousElement = $msg.previousElementSibling
-                ? ($msg.previousElementSibling.id === "---new-messages-bar" ? $msg.previousElementSibling.previousElementSibling : $msg.previousElementSibling)
-                : null;
+            const interactionInfo = await bot.message.getInteractionInfo($msg);
 
-            /// Handle player commands
-            if ($previousElement) {
-                const $previousMessage = $previousElement as HTMLElement;
+            let botUser: BotUser | null = null;
 
-                const user = await bot.message.getBotUserWhoSent($previousMessage);
+            const messageContent: string | undefined = ($msg.querySelector("div[id^='message-content']") as HTMLDivElement | null)?.innerText;
 
-                if (user) {
-                    const command = ($previousMessage.querySelector("div[id^='message-content']") as HTMLElement | null)?.innerText;
-                    const mudaeResponse = ($msg.querySelector("div[id^='message-content']") as HTMLElement | null)?.innerText;
+            if (interactionInfo) {
+                botUser = bot.getUserWithCriteria(user => user.id === interactionInfo.userId);
 
-                    if (command && mudaeResponse && mudaeResponse.startsWith(`${user.username}, `)) {
-                        if (command === "$tu") {
-                            const matchRolls = LANG[bot.preferences.language].regex.tu_rolls.exec(mudaeResponse);
-                            if (matchRolls) {
-                                const rolls = Number(matchRolls[1]);
+                if (botUser && messageContent) {
+                    if (interactionInfo.command === "tu") {
+                        const matchRolls = LANG[bot.preferences.language].regex.tu_rolls.exec(messageContent);
+                        const matchRollsUs = LANG[bot.preferences.language].regex.tu_rolls_us.exec(messageContent);
+                        const matchPower = LANG[bot.preferences.language].regex.tu_power.exec(messageContent);
+                        const matchKakeraConsumption = LANG[bot.preferences.language].regex.tu_kakera_consumption.exec(messageContent);
 
-                                const hasRollsMax = user.info.has(USER_INFO.ROLLS_MAX);
+                        if (matchRolls) {
+                            const rolls = Number(matchRolls[1]);
 
-                                if (!hasRollsMax || (user.info.get(USER_INFO.ROLLS_MAX) as number) < rolls) {
-                                    user.info.set(USER_INFO.ROLLS_MAX, rolls);
-                                }
+                            const hasRollsMax = botUser.info.has(USER_INFO.ROLLS_MAX);
 
-                                user.info.set(USER_INFO.ROLLS_LEFT, rolls);
+                            if (!hasRollsMax || (botUser.info.get(USER_INFO.ROLLS_MAX) as number) < rolls) {
+                                botUser.info.set(USER_INFO.ROLLS_MAX, rolls);
                             }
 
-                            const matchRollsUs = LANG[bot.preferences.language].regex.tu_rolls_us.exec(mudaeResponse);
-                            if (matchRollsUs) {
-                                const rollsUs = Number(matchRollsUs[1]);
+                            botUser.info.set(USER_INFO.ROLLS_LEFT, rolls);
+                        }
 
-                                user.info.set(USER_INFO.ROLLS_LEFT_US, rollsUs);
+                        if (matchRollsUs) {
+                            const rollsUs = Number(matchRollsUs[1]);
+
+                            botUser.info.set(USER_INFO.ROLLS_LEFT_US, rollsUs);
+                        }
+
+                        if (matchPower) {
+                            const power = Number(matchPower[1]);
+
+                            botUser.info.set(USER_INFO.POWER, power);
+                        }
+
+                        if (/\$rt/.test(messageContent)) {
+                            const cooldownRTMatch = /: (.+) min. \(\$rtu\)/.exec(messageContent);
+
+                            botUser.info.set(USER_INFO.CAN_RT, !cooldownRTMatch);
+
+                            if (cooldownRTMatch) {
+                                const ms = bot.mudaeTimeToMs(cooldownRTMatch[1]);
+
+                                if (ms) botUser.setTUTimer(ms + 500);
                             }
+                        } else {
+                            botUser.info.set(USER_INFO.CAN_RT, false);
+                        }
 
-                            const matchPower = LANG[bot.preferences.language].regex.tu_power.exec(mudaeResponse);
-                            if (matchPower) {
-                                const power = Number(matchPower[1]);
+                        if (LANG[bot.preferences.language].regex.tu_marry.test(messageContent)) {
+                            const cantMarry = LANG[bot.preferences.language].regex.tu_cant_marry.exec(messageContent);
 
-                                user.info.set(USER_INFO.POWER, power);
-                            }
+                            botUser.info.set(USER_INFO.CAN_MARRY, !cantMarry);
+                        }
 
-                            if (/\$rt/.test(mudaeResponse)) {
-                                const cooldownRTMatch = /: (.+) min. \(\$rtu\)/.exec(mudaeResponse);
+                        if (matchKakeraConsumption) {
+                            const consumption = Number(matchKakeraConsumption[1]);
 
-                                user.info.set(USER_INFO.CAN_RT, !cooldownRTMatch);
+                            botUser.info.set(USER_INFO.CONSUMPTION, consumption);
+                        }
 
-                                if (cooldownRTMatch) {
-                                    const ms = bot.mudaeTimeToMs(cooldownRTMatch[1]);
-
-                                    if (ms) user.setTUTimer(ms + 500);
-                                }
-                            } else {
-                                user.info.set(USER_INFO.CAN_RT, false);
-                            }
-
-                            if (LANG[bot.preferences.language].regex.tu_marry.test(mudaeResponse)) {
-                                const cantMarry = LANG[bot.preferences.language].regex.tu_cant_marry.exec(mudaeResponse);
-
-                                user.info.set(USER_INFO.CAN_MARRY, !cantMarry);
-                            }
-
-                            const matchKakeraConsumption = LANG[bot.preferences.language].regex.tu_kakera_consumption.exec(mudaeResponse);
-
-                            if (matchKakeraConsumption) {
-                                const consumption = Number(matchKakeraConsumption[1]);
-
-                                user.info.set(USER_INFO.CONSUMPTION, consumption);
-                            }
-
-                            if (!user.hasNeededInfo()) {
-                                bot.error(`Couldn't retrieve needed info for user ${user.username}. Make sure your $tu configuration exposes every needed information.`);
-                                return;
-                            }
-
-                            syncUserInfo(user);
+                        if (!botUser.hasNeededInfo()) {
+                            bot.error(`Couldn't retrieve needed info for user ${botUser.username}. Make sure your $tu configuration exposes every needed information.`);
                             return;
-                        };
+                        }
+
+                        syncUserInfo(botUser);
+                        return;
                     }
                 }
             }
 
             if (!bot.hasNeededInfo()) return;
 
-            const $messageContent = $msg.querySelector("div[id^='message-content']") as HTMLElement | null;
+            /// Handle rolls
+            if (interactionInfo && ROLL_TYPES.includes(interactionInfo.command as any)) {
+                const characterName = ($msg.querySelector("span[class^='embedAuthorName']") as HTMLElement | null)?.innerText;
 
-            if ($messageContent) {
-                const messageContent = $messageContent.innerText;
+                if (!characterName) {
+                    /// Handle "no more rolls" messages
+                    if (botUser && messageContent) {
+                        const noMoreRollsMatch = LANG[bot.preferences.language].regex.noMoreRolls.exec(messageContent);
 
+                        if (noMoreRollsMatch) {
+                            setTimeout(() => {
+                                const user = botUser;
+
+                                user?.send.tu()
+                                    .catch(err => bot.log.error(`User ${user.username} couldn't send /tu: ${err.message}`, false))
+                            }, 250);
+
+                            return;
+                        }
+                    }
+
+                    bot.log.error("Couldn't get character name from message [?]", false); //# Add reference to message
+                    return;
+                }
+
+                const $footer = $msg.querySelector("span[class^='embedFooterText']") as HTMLSpanElement | null;
+
+                const isOwned = !!($footer && $footer.innerText.includes(LANG[bot.preferences.language].string.ownedCharacter));
+
+                /// Decreases rolls count && handle new soulmates
+                if (botUser) {
+                    const rollsUs = botUser.info.get(USER_INFO.ROLLS_LEFT_US) as number | undefined;
+
+                    if (rollsUs != null && rollsUs > 0) {
+                        botUser.info.set(USER_INFO.ROLLS_LEFT_US, Math.max(rollsUs - 1, 0));
+                    } else {
+                        const rollsLeft = botUser.info.get(USER_INFO.ROLLS_LEFT) as number;
+
+                        botUser.info.set(USER_INFO.ROLLS_LEFT, Math.max(rollsLeft - 1, 0));
+                    }
+
+                    syncUserInfo(botUser);
+
+                    const $embedDescription = $msg.querySelector("div[class^='embedDescription']") as HTMLElement | null;
+
+                    if ($embedDescription && $embedDescription.innerText.includes(LANG[bot.preferences.language].string.newSoulmate)) {
+                        bot.log.event(EVENTS.SOULMATE, { character: characterName, user: botUser.username });
+                    }
+                }
+
+                /// Check if should try to claim
+                if (!isOwned) {
+                    let isThisInteresting = false;
+
+                    const mentionedNicknames: string[] = [...$msg.querySelectorAll("span.mention")].map($mention => ($mention as HTMLElement).innerText.slice(1));
+
+                    for (const mentionedNick of mentionedNicknames) {
+                        if (bot.preferences.snipeList.has(mentionedNick) || bot.getUserWithCriteria(user => user.nick === mentionedNick)) {
+                            isThisInteresting = true;
+                            break;
+                        }
+                    }
+
+                    const marriageableUser = bot.getMarriageableUser(mentionedNicknames);
+
+                    //# Search in a user configured list of interesting characters
+                    // if (marriageableUser && !isThisInteresting && bot.isLastReset()) {
+                    //     if (characterName === "hmm") {
+                    //         isThisInteresting = true;
+                    //     };
+                    // }
+
+                    if (isThisInteresting) {
+                        bot.log.event(EVENTS.FOUND_CHARACTER, { character: characterName });
+
+                        if (marriageableUser) {
+                            //# Verify if marriageableUser can still marry after all delay calculations (In case of multiple marriageable characters at the same time)
+
+                            let claimDelay = bot.preferences.claim.delay;
+
+                            if (claimDelay > 0) {
+                                if (bot.preferences.claim.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
+
+                                claimDelay *= 1000;
+                            }
+
+                            const isProtected = !!$msg.querySelector("img[alt=':wishprotect:']");
+                            const canClaimImmediately = !isProtected || marriageableUser.id === interactionInfo.userId;
+
+                            if (!canClaimImmediately) claimDelay = 2905 + Math.max(claimDelay - 2905, 0);
+
+                            const thisClaim = () => {
+                                marriageableUser.pressMessageButton($msg)
+                                    .catch(err => bot.log.error(`User ${marriageableUser.username} couldn't react to a message: ${err.message}`, false));
+                            };
+
+                            if (!claimDelay) return thisClaim();
+
+                            setTimeout(() => thisClaim(), 2905 + Math.max(claimDelay - 2905, 0));
+
+                            return;
+                        }
+
+                        bot.log.warn(`Can't claim character ${characterName} right now.`); //# Add reference to character message
+                    }
+
+                    return;
+                }
+
+                /// Owned characters
+                const $kakeraImg: HTMLImageElement | null = $msg.querySelector("button img");
+
+                if ($kakeraImg) {
+                    const kakeraCode = $kakeraImg.alt;
+                    let kakeraToGet: KAKERA | null = null;
+
+                    for (const kakera of (bot.preferences.kakera.perToken.get("all") as Set<KAKERA>)) {
+                        if (KAKERAS[kakera].internalName === kakeraCode) {
+                            kakeraToGet = kakera;
+                            break;
+                        }
+                    }
+
+                    for (const botUser of bot.users) {
+                        let kakeraToGetPerUser = kakeraToGet;
+
+                        if (!kakeraToGetPerUser && bot.preferences.useUsers === "tokenlist") {
+                            for (const kakera of (bot.preferences.kakera.perToken.get(botUser.token) as Set<KAKERA>)) {
+                                if (KAKERAS[kakera].internalName === kakeraCode) {
+                                    kakeraToGetPerUser = kakera;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (kakeraToGetPerUser) {
+                            const powerCost: number = kakeraToGetPerUser === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
+
+                            if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
+                                let claimDelay = bot.preferences.kakera.delay;
+
+                                const thisClaim = () => {
+                                    botUser.pressMessageButton($msg)
+                                        .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
+                                };
+
+                                if (claimDelay > 0) {
+                                    if (bot.preferences.kakera.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
+
+                                    setTimeout(() => thisClaim(), claimDelay * 1000);
+                                    return;
+                                }
+
+                                thisClaim();
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                return;
+            }
+
+            if (messageContent) {
                 /// Handle character claims & steals
                 const characterClaimMatch = LANG[bot.preferences.language].regex.marry_notification.exec(messageContent.trim());
 
@@ -609,24 +763,9 @@ const bot: BotManager = {
                     return;
                 }
 
-                /// Handle "no more rolls" messages
-                const noMoreRollsMatch = LANG[bot.preferences.language].regex.noMoreRolls.exec(messageContent);
-
-                if (noMoreRollsMatch) {
-                    for (const botUser of bot.users) {
-                        if (botUser.username === noMoreRollsMatch[1]) {
-                            setTimeout(() => {
-                                botUser.sendChannelMessage("$tu")
-                                    .catch(err => bot.log.error(`User ${botUser.username} couldn't send a channel message: ${err.message}`, false))
-                            }, 250);
-                            return;
-                        }
-                    }
-                }
-
+                /// Handle kakera claiming
                 const $kakeraClaimStrong = $msg.querySelector("div[id^='message-content'] span[class^='emojiContainer'] + strong") as HTMLElement | null;
 
-                /// Handle kakera claiming
                 if ($kakeraClaimStrong) {
                     const kakeraClaimMatch = /^(.+)\s\+(\d+)$/.exec($kakeraClaimStrong.innerText);
 
@@ -657,163 +796,6 @@ const bot: BotManager = {
                         }
 
                         return;
-                    }
-                }
-            }
-
-            const $imageWrapper = $msg.querySelector("div[class^='embedDescription'] + div[class^='imageContent'] div[class^='imageWrapper']") as HTMLElement | null;
-
-            /// Handle character messages
-            if ($imageWrapper) {
-                const $footer = $msg.querySelector("span[class^='embedFooterText']") as HTMLElement | null;
-
-                const isOwned = !!($footer && $footer.innerText.includes(LANG[bot.preferences.language].string.ownedCharacter));
-
-                const isCharacterLookupMessage = !!($footer && (/^\d+ \/ \d+$/.test($footer.innerText) || LANG[bot.preferences.language].regex.ownedLookup.test($footer.innerText)));
-
-                if (isCharacterLookupMessage) return;
-
-                const characterName = ($msg.querySelector("span[class^='embedAuthorName']") as HTMLElement | null)?.innerText;
-
-                if (!characterName) {
-                    bot.log.error("Couldn't get character name from message [?]", false); //# Add reference to message
-                    return;
-                }
-
-                const interactionUserId = await bot.message.getInteractionUserId($msg);
-
-                /// Decreases rolls count && handle new soulmates
-                if (interactionUserId) {
-                    const user = bot.getUserWithCriteria(user => user.id === interactionUserId);
-
-                    if (user) {
-                        const rollsUs = (user.info.get(USER_INFO.ROLLS_LEFT_US) as number | undefined);
-
-                        if (rollsUs != null && rollsUs > 0) {
-                            user.info.set(USER_INFO.ROLLS_LEFT_US, Math.max(rollsUs - 1, 0));
-                        } else {
-                            const rollsLeft = (user.info.get(USER_INFO.ROLLS_LEFT) as number);
-
-                            user.info.set(USER_INFO.ROLLS_LEFT, Math.max(rollsLeft - 1, 0));
-                        }
-
-                        syncUserInfo(user);
-
-                        const $embedDescription = $msg.querySelector("div[class^='embedDescription']") as HTMLElement | null;
-
-                        if ($embedDescription && $embedDescription.innerText.includes(LANG[bot.preferences.language].string.newSoulmate)) {
-                            bot.log.event(EVENTS.SOULMATE, { character: characterName, user: user.username });
-                        }
-                    }
-                }
-
-                /// Check if should try to claim
-                if (!isOwned) {
-                    let isThisInteresting = false;
-
-                    const mentionedNicknames: string[] = [...$msg.querySelectorAll("span.mention")].map($mention => ($mention as HTMLElement).innerText.slice(1));
-
-                    for (const mentionedNick of mentionedNicknames) {
-                        if (bot.preferences.snipeList.has(mentionedNick) || bot.getUserWithCriteria(user => user.nick === mentionedNick)) {
-                            isThisInteresting = true;
-                            break;
-                        }
-                    }
-
-                    const marriageableUser = bot.getMarriageableUser(mentionedNicknames);
-
-                    //# Search in a user configured list of interesting characters
-                    // if (marriageableUser && !isThisInteresting && bot.isLastReset()) {
-                    //     if (characterName === "hmm") {
-                    //         isThisInteresting = true;
-                    //     };
-                    // }
-
-                    if (isThisInteresting) {
-                        bot.log.event(EVENTS.FOUND_CHARACTER, { character: characterName });
-
-                        if (marriageableUser) {
-                            //# Verify if marriageableUser can still marry after all delay calculations (In case of multiple marriageable characters at the same time)
-
-                            let claimDelay = bot.preferences.claim.delay;
-
-                            if (claimDelay > 0) {
-                                if (bot.preferences.claim.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
-
-                                claimDelay *= 1000;
-                            }
-
-                            const isProtected = !!$msg.querySelector("img[alt=':wishprotect:']");
-                            const canClaimImmediately = !isProtected || (interactionUserId && marriageableUser.id === interactionUserId);
-
-                            if (!canClaimImmediately) claimDelay = 2905 + Math.max(claimDelay - 2905, 0);
-
-                            const thisClaim = () => {
-                                marriageableUser.pressMessageButton($msg)
-                                    .catch(err => bot.log.error(`User ${marriageableUser.username} couldn't react to a message: ${err.message}`, false));
-                            };
-
-                            if (!claimDelay) return thisClaim();
-
-                            setTimeout(() => thisClaim(), 2905 + Math.max(claimDelay - 2905, 0));
-
-                            return;
-                        }
-
-                        bot.log.warn(`Can't claim character ${characterName} right now.`); //# Add reference to character message
-                    }
-
-                    return;
-                }
-
-                /// Owned characters
-                const $kakeraImg: HTMLImageElement | null = $msg.querySelector("button img");
-
-                if ($kakeraImg) {
-                    const kakeraCode = $kakeraImg.alt;
-                    let kakeraToGet: KAKERA | null = null;
-
-                    for (const kakera of (bot.preferences.kakera.perToken.get("all") as Set<KAKERA>)) {
-                        if (KAKERAS[kakera].internalName === kakeraCode) {
-                            kakeraToGet = kakera;
-                            break;
-                        }
-                    }
-
-                    for (const botUser of bot.users) {
-                        let kakeraToGetPerUser = kakeraToGet;
-
-                        if (!kakeraToGetPerUser && bot.preferences.useUsers === "tokenlist") {
-                            for (const kakera of (bot.preferences.kakera.perToken.get(botUser.token) as Set<KAKERA>)) {
-                                if (KAKERAS[kakera].internalName === kakeraCode) {
-                                    kakeraToGetPerUser = kakera;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (kakeraToGetPerUser) {
-                            const powerCost: number = kakeraToGetPerUser === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
-
-                            if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
-                                let claimDelay = bot.preferences.kakera.delay;
-
-                                const thisClaim = () => {
-                                    botUser.pressMessageButton($msg)
-                                        .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
-                                };
-
-                                if (claimDelay > 0) {
-                                    if (bot.preferences.kakera.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
-
-                                    setTimeout(() => thisClaim(), claimDelay * 1000);
-                                    return;
-                                }
-
-                                thisClaim();
-                                return;
-                            }
-                        }
                     }
                 }
             }

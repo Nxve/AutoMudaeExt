@@ -1,12 +1,14 @@
 import type { BotEvent } from "./bot/event";
 import { INTERVAL_SEND_MESSAGE, MUDAE_USER_ID } from "./consts";
 import { SVGS } from "./svgs";
-import { KAKERAS, SLASH_COMMANDS } from "./mudae";
+import { KAKERAS, SLASH_COMMANDS, SlashCommand } from "./mudae";
 import { minifyToken, sleep } from "./utils";
 import type { DiscordMessage } from "./discord";
 
+export const ROLL_TYPES = ["wx", "wa", "wg", "hx", "ha", "hg"] as const;
+
 export type PrefUseUsers = "logged" | "tokenlist";
-export type PrefRollType = "wx" | "wa" | "wg" | "hx" | "ha" | "hg";
+export type PrefRollType = typeof ROLL_TYPES[number];
 export type PrefNotificationType = "sound" | "popup" | "both";
 export type PrefNotification = keyof typeof NOTIFICATIONS;
 export type PrefLanguage = "en" | "fr" | "es" | "pt_br";
@@ -77,8 +79,7 @@ export interface BotManager {
         getId: ($message: HTMLElement) => string | undefined
         getAuthorId: ($message: HTMLElement) => Promise<string | null>
         isFromMudae: ($message: HTMLElement) => Promise<boolean>
-        getBotUserWhoSent: ($message: HTMLElement) => Promise<BotUser | null>
-        getInteractionUserId: ($message: HTMLElement) => Promise<string | null>
+        getInteractionInfo: ($message: HTMLElement) => Promise<InteractionInfo | null>
     }
 
     timers: {
@@ -171,6 +172,11 @@ const NEEDED_USER_INFO: UserInfo[] = [
     USER_INFO.CONSUMPTION
 ];
 
+export interface InteractionInfo {
+    userId: string
+    command: string
+};
+
 export class BotUser {
     manager: BotManager
     info: Map<UserInfo, unknown>
@@ -233,21 +239,21 @@ export class BotUser {
         let nick: string = "";
         let userData: any;
 
-        while (!nick){
+        while (!nick) {
             try {
                 const response = await fetch(`https://discord.com/api/v9/users/${this.id}/profile?guild_id=${guildId}`, {
                     "headers": {
                         "authorization": this.token
                     }
                 });
-    
+
                 userData = await response.json();
             } catch (error: any) {
                 throw Error(`Couldn't fetch user nick for token [${minifyToken(this.token)}]: ${error.message}`);
             }
 
             /// Rate limited
-            if (Object.hasOwn(userData, "retry_after")){
+            if (Object.hasOwn(userData, "retry_after")) {
                 const retryTime: number = userData.retry_after * 1000;
 
                 await sleep(retryTime);
@@ -270,32 +276,12 @@ export class BotUser {
         return NEEDED_USER_INFO.every(info => this.info.has(info), this);
     }
 
-    async sendChannelMessage(message: string): Promise<void> {
-        const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
+    setTUTimer(ms: number) {
+        if (this.sendTUTimer) clearTimeout(this.sendTUTimer);
 
-        if (!channelId) throw Error("Unknown channel ID");
-
-        const now = performance.now();
-
-        if (now - this.manager.cdSendMessage < INTERVAL_SEND_MESSAGE) {
-            return; /// Silent failure. Throwing it would log as an error.
-        }
-
-        this.manager.cdSendMessage = now;
-
-        try {
-            await fetch(`https://discord.com/api/v9/channels/${channelId}/messages`, {
-                "method": "POST",
-                "headers": {
-                    "authorization": this.token,
-                    "content-type": "application/json"
-                },
-                "body": `{"content":"${message || '?'}","nonce":"${++this.manager.nonce}","tts":false}`
-            });
-        } catch (error) {
-            console.error("Error while sending Discord message", error);
-            throw Error("Couldn't send a Discord message. Check console for more info.");
-        }
+        this.sendTUTimer = setTimeout((user: BotUser) => {
+            user.send.tu();
+        }, ms, this);
     }
 
     async pressMessageButton($message: HTMLElement): Promise<void> {
@@ -339,11 +325,8 @@ export class BotUser {
         }
     }
 
-    async roll(): Promise<void> {
-        if (!this.manager.preferences) {
-            throw Error("Unknown preferences.")
-        }
-
+    private async sendSlashCommand(command: SlashCommand): Promise<void> {
+        const slashCommandInfo = SLASH_COMMANDS[command];     
         const guildId = this.manager.info.get(DISCORD_INFO.GUILD_ID);
         const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
 
@@ -354,17 +337,14 @@ export class BotUser {
             throw Error("Unknown channel ID.");
         }
 
-        const rollType = this.manager.preferences.roll.type;
-        const command = SLASH_COMMANDS[rollType];
-
         try {
-            fetch("https://discord.com/api/v9/interactions", {
+            await fetch("https://discord.com/api/v9/interactions", {
                 "method": "POST",
                 "headers": {
                     "authorization": this.token,
                     "content-type": "multipart/form-data; boundary=----BDR",
                 },
-                "body": `------BDR\r\nContent-Disposition: form-data; name="payload_json"\r\n\r\n{"type":2,"application_id":"${MUDAE_USER_ID}","guild_id":"${guildId}","channel_id":"${channelId}","session_id":"${this.manager.sessionID}","data":{"version":"${command.version}","id":"${command.id}","name":"${rollType}","type":1},"nonce":"${++this.manager.nonce}"}\r\n------BDR--\r\n`
+                "body": `------BDR\r\nContent-Disposition: form-data; name="payload_json"\r\n\r\n{"type":2,"application_id":"${MUDAE_USER_ID}","guild_id":"${guildId}","channel_id":"${channelId}","session_id":"${this.manager.sessionID}","data":{"version":"${slashCommandInfo.version}","id":"${slashCommandInfo.id}","name":"${command}","type":1},"nonce":"${++this.manager.nonce}"}\r\n------BDR--\r\n`
             });
         } catch (error) {
             console.error(error);
@@ -372,12 +352,44 @@ export class BotUser {
         }
     }
 
-    setTUTimer(ms: number) {
-        if (this.sendTUTimer) clearTimeout(this.sendTUTimer);
-
-        this.sendTUTimer = setTimeout((user: BotUser) => {
-            user.sendChannelMessage("$tu");
-        }, ms, this);
+    send = {
+        tu: async () => {
+            await this.sendSlashCommand("tu");
+        },
+        roll: async () => {
+            if (!this.manager.preferences) {
+                throw Error("Unknown preferences.")
+            }
+    
+            await this.sendSlashCommand(this.manager.preferences.roll.type);
+        },
+        message: async (message: string) => {
+            const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
+    
+            if (!channelId) throw Error("Unknown channel ID");
+    
+            const now = performance.now();
+    
+            if (now - this.manager.cdSendMessage < INTERVAL_SEND_MESSAGE) {
+                return; /// Silent failure. Throwing it would log as an error.
+            }
+    
+            this.manager.cdSendMessage = now;
+    
+            try {
+                await fetch(`https://discord.com/api/v9/channels/${channelId}/messages`, {
+                    "method": "POST",
+                    "headers": {
+                        "authorization": this.token,
+                        "content-type": "application/json"
+                    },
+                    "body": `{"content":"${message || '?'}","nonce":"${++this.manager.nonce}","tts":false}`
+                });
+            } catch (error) {
+                console.error("Error while sending Discord message", error);
+                throw Error("Couldn't send a Discord message. Check console for more info.");
+            }
+        }
     }
 };
 
