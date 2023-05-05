@@ -456,13 +456,13 @@ const bot: BotManager = {
                         if (matchRolls) {
                             const rolls = Number(matchRolls[1]);
 
+                            botUser.info.set(USER_INFO.ROLLS_LEFT, rolls);
+
                             const hasRollsMax = botUser.info.has(USER_INFO.ROLLS_MAX);
 
                             if (!hasRollsMax || (botUser.info.get(USER_INFO.ROLLS_MAX) as number) < rolls) {
                                 botUser.info.set(USER_INFO.ROLLS_MAX, rolls);
                             }
-
-                            botUser.info.set(USER_INFO.ROLLS_LEFT, rolls);
                         }
 
                         if (matchRollsUs) {
@@ -475,6 +475,12 @@ const bot: BotManager = {
                             const power = Number(matchPower[1]);
 
                             botUser.info.set(USER_INFO.POWER, power);
+                        }
+
+                        if (matchKakeraConsumption) {
+                            const consumption = Number(matchKakeraConsumption[1]);
+
+                            botUser.info.set(USER_INFO.CONSUMPTION, consumption);
                         }
 
                         if (/\$rt/.test(messageContent)) {
@@ -497,12 +503,6 @@ const bot: BotManager = {
                             botUser.info.set(USER_INFO.CAN_MARRY, !cantMarry);
                         }
 
-                        if (matchKakeraConsumption) {
-                            const consumption = Number(matchKakeraConsumption[1]);
-
-                            botUser.info.set(USER_INFO.CONSUMPTION, consumption);
-                        }
-
                         if (!botUser.hasNeededInfo()) {
                             bot.error(`Couldn't retrieve needed info for user ${botUser.username}. Make sure your $tu configuration exposes every needed information.`);
                             return;
@@ -522,16 +522,18 @@ const bot: BotManager = {
 
                 if (!characterName) {
                     /// Handle "no more rolls" messages
-                    if (botUser && messageContent) {
+                    if (messageContent) {
                         const noMoreRollsMatch = LANG[bot.preferences.language].regex.noMoreRolls.exec(messageContent);
 
                         if (noMoreRollsMatch) {
-                            setTimeout(() => {
-                                const user = botUser;
-
-                                user?.send.tu()
-                                    .catch(err => bot.log.error(`User ${user.username} couldn't send /tu: ${err.message}`, false))
-                            }, 250);
+                            if (botUser){
+                                setTimeout(() => {
+                                    const user = botUser;
+    
+                                    user?.send.tu()
+                                        .catch(err => bot.log.error(`User ${user.username} couldn't send /tu: ${err.message}`, false))
+                                }, 250);
+                            }                            
 
                             return;
                         }
