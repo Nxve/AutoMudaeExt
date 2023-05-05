@@ -194,7 +194,7 @@ const bot: BotManager = {
 
     hasNeededInfo() {
         for (const botUser of this.users) {
-            if (!botUser.hasNeededInfo()) return false;
+            if (botUser.missingInfo().length > 0) return false;
         }
         return true;
     },
@@ -363,9 +363,9 @@ const bot: BotManager = {
             if (now - bot.cdGatherInfo < 1000) return;
 
             for (const botUser of bot.users) {
-                if (!botUser.hasNeededInfo()) {
+                if (botUser.missingInfo().length > 0) {
                     botUser.send.tu()
-                        .catch(err => bot.log.error(`User ${botUser.username} couldn't send a channel message: ${err.message}`, false));
+                        .catch(err => bot.log.error(`User ${botUser.username} couldn't send TU: ${err.message}`, false));
                     break;
                 }
             }
@@ -498,13 +498,15 @@ const bot: BotManager = {
                         }
 
                         if (LANG[bot.preferences.language].regex.tu_marry.test(messageContent)) {
-                            const cantMarry = LANG[bot.preferences.language].regex.tu_cant_marry.exec(messageContent);
+                            const cantMarry = LANG[bot.preferences.language].regex.tu_cant_marry.test(messageContent);
 
                             botUser.info.set(USER_INFO.CAN_MARRY, !cantMarry);
                         }
 
-                        if (!botUser.hasNeededInfo()) {
-                            bot.error(`Couldn't retrieve needed info for user ${botUser.username}. Make sure your $tu configuration exposes every needed information.`);
+                        const missingUserInfo = botUser.missingInfo();
+
+                        if (missingUserInfo.length > 0) {
+                            bot.error(`Couldn't retrieve info for user ${botUser.username}: ${missingUserInfo}`);
                             return;
                         }
 

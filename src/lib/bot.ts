@@ -272,8 +272,14 @@ export class BotUser {
         this.nick = nick;
     }
 
-    hasNeededInfo(): boolean {
-        return NEEDED_USER_INFO.every(info => this.info.has(info), this);
+    missingInfo(): UserInfo[] {
+        const missingUserInfo: UserInfo[] = [];
+
+        NEEDED_USER_INFO.forEach(uinfo => {
+            if (!this.info.has(uinfo)) missingUserInfo.push(uinfo);
+        });
+
+        return missingUserInfo;
     }
 
     setTUTimer(ms: number) {
