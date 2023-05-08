@@ -47,12 +47,12 @@ const bot: BotManager = {
         _MessageAuthorCache: new Map(),
         _fetch(messageId) {
             return new Promise((resolve, reject) => {
-                if (!bot.info.has("channel_id")) {
+                if (!bot.info.has(DISCORD_INFO.CHANNEL_ID)) {
                     reject("Unknown channel ID.");
                     return;
                 }
 
-                const channelId = bot.info.get("channel_id") as string;
+                const channelId = bot.info.get(DISCORD_INFO.CHANNEL_ID) as string;
                 const [firstUser] = bot.users;
 
                 fetch(`https://discord.com/api/v9/channels/${channelId}/messages?limit=1&around=${messageId}`, {

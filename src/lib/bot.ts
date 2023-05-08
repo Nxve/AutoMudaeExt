@@ -233,8 +233,7 @@ export class BotUser {
     }
 
     async fetchNick(): Promise<void> {
-        //# Get guildId from manager
-        const guildId = window.location.pathname.split("/")[2];
+        const guildId = this.manager.info.get(DISCORD_INFO.GUILD_ID) || window.location.pathname.split("/")[2];
 
         let nick: string = "";
         let userData: any;
@@ -292,8 +291,8 @@ export class BotUser {
 
     async pressMessageButton($message: HTMLElement): Promise<void> {
         const messageId = this.manager.message.getId($message);
-        const guildId = this.manager.info.get("guild_id") as string;
-        const channelId = this.manager.info.get("channel_id") as string;
+        const guildId = this.manager.info.get(DISCORD_INFO.GUILD_ID) as string;
+        const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID) as string;
 
         if (!messageId) throw Error("Unknown message ID.");
         if (!guildId) throw Error("Unknown guild ID.");
