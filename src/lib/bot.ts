@@ -56,7 +56,7 @@ export interface BotManager {
     hasNeededInfo(): boolean
     isLastReset(): boolean
     mudaeTimeToMs(time: string): number | null
-    getMarriageableUser(preferableUserNicknames?: string[]): BotUser | null
+    getMarriageableUser(priority?: {nicknames?: string[], userId?: string}): BotUser | null
     setup(): Promise<void>
     toggle(): void
     think(): void

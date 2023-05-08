@@ -221,9 +221,9 @@ const bot: BotManager = {
         return totalMs;
     },
 
-    getMarriageableUser(preferableUserNicknames?: string[]) {
-        if (!preferableUserNicknames || preferableUserNicknames.length < 1) {
-            return this.getUserWithCriteria((user => (user.info.get(USER_INFO.CAN_MARRY) as boolean)));
+    getMarriageableUser(priority?: { nicknames?: string[], userId?: string }) {
+        if (!priority) {
+            return this.getUserWithCriteria(user => (user.info.get(USER_INFO.CAN_MARRY) as boolean));
         }
 
         let marriageableUser;
@@ -237,7 +237,11 @@ const bot: BotManager = {
             if (botUser.info.get(USER_INFO.CAN_MARRY)) {
                 marriageableUser = botUser;
 
-                if (preferableUserNicknames.includes(botUser.nick)) break;
+                if (priority.userId) {
+                    if (priority.userId === botUser.id) break;
+                } else if (priority.nicknames && priority.nicknames.includes(botUser.nick)) {
+                    break;
+                }
             }
         }
 
@@ -438,10 +442,9 @@ const bot: BotManager = {
             if (!await bot.message.isFromMudae($msg)) return;
 
             const interactionInfo = await bot.message.getInteractionInfo($msg);
+            const messageContent: string | undefined = ($msg.querySelector("div[id^='message-content']") as HTMLDivElement | null)?.innerText;
 
             let botUser: BotUser | null = null;
-
-            const messageContent: string | undefined = ($msg.querySelector("div[id^='message-content']") as HTMLDivElement | null)?.innerText;
 
             if (interactionInfo) {
                 botUser = bot.getUserWithCriteria(user => user.id === interactionInfo.userId);
@@ -518,8 +521,11 @@ const bot: BotManager = {
 
             if (!bot.hasNeededInfo()) return;
 
-            /// Handle rolls
-            if (interactionInfo && ROLL_TYPES.includes(interactionInfo.command as any)) {
+            /// Handle character messages
+            const $imageWrapper = $msg.querySelector("div[class^='embedDescription'] + div[class^='imageContent'] div[class^='imageWrapper']") as HTMLDivElement | null;
+            const isSlashRolled = interactionInfo ? ROLL_TYPES.includes(interactionInfo.command as any) : false;
+
+            if (isSlashRolled || $imageWrapper) {
                 const characterName = ($msg.querySelector("span[class^='embedAuthorName']") as HTMLElement | null)?.innerText;
 
                 if (!characterName) {
@@ -528,14 +534,14 @@ const bot: BotManager = {
                         const noMoreRollsMatch = LANG[bot.preferences.language].regex.noMoreRolls.exec(messageContent);
 
                         if (noMoreRollsMatch) {
-                            if (botUser){
+                            if (botUser) {
                                 setTimeout(() => {
                                     const user = botUser;
-    
+
                                     user?.send.tu()
                                         .catch(err => bot.log.error(`User ${user.username} couldn't send /tu: ${err.message}`, false))
                                 }, 250);
-                            }                            
+                            }
 
                             return;
                         }
@@ -546,7 +552,6 @@ const bot: BotManager = {
                 }
 
                 const $footer = $msg.querySelector("span[class^='embedFooterText']") as HTMLSpanElement | null;
-
                 const isOwned = !!($footer && $footer.innerText.includes(LANG[bot.preferences.language].string.ownedCharacter));
 
                 /// Decreases rolls count && handle new soulmates
@@ -583,7 +588,8 @@ const bot: BotManager = {
                         }
                     }
 
-                    const marriageableUser = bot.getMarriageableUser(mentionedNicknames);
+                    const isProtected = !!$msg.querySelector("img[alt=':wishprotect:']");
+                    const marriageableUser = bot.getMarriageableUser({ nicknames: mentionedNicknames, ...((isProtected && interactionInfo) && { userId: interactionInfo.userId }) });
 
                     //# Search in a user configured list of interesting characters
                     // if (marriageableUser && !isThisInteresting && bot.isLastReset()) {
@@ -606,8 +612,7 @@ const bot: BotManager = {
                                 claimDelay *= 1000;
                             }
 
-                            const isProtected = !!$msg.querySelector("img[alt=':wishprotect:']");
-                            const canClaimImmediately = !isProtected || marriageableUser.id === interactionInfo.userId;
+                            const canClaimImmediately = !isProtected || (interactionInfo && marriageableUser.id === interactionInfo.userId);
 
                             if (!canClaimImmediately) claimDelay = 2905 + Math.max(claimDelay - 2905, 0);
 
