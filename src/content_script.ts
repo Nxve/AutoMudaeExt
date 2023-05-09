@@ -8,7 +8,7 @@ import { BotUser, USER_INFO, ROLL_TYPES } from "./lib/bot";
 import { INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID, INTERVAL_DONT_ROLL_AFTER_ACTIVITY } from "./lib/consts";
 import { MESSAGES, ChromeMessageQueue } from "./lib/messaging";
 import { KAKERAS } from "./lib/mudae";
-import { jsonMapSetReplacer, jsonMapSetReviver, minifyToken, randomFloat, randomSessionID } from "./lib/utils";
+import { getPeriodHash, jsonMapSetReplacer, jsonMapSetReviver, minifyToken, randomFloat, randomSessionID } from "./lib/utils";
 import { EVENTS } from "./lib/bot/event";
 import _ from "lodash";
 import { LANG } from "./lib/localization";
@@ -25,7 +25,8 @@ const bot: BotManager = {
     cdGatherInfo: 0,
     cdRoll: 0,
     lastSeenMessageTime: 0,
-    lastResetHash: "",
+    lastPeriodHash: "",
+    didWarnThisPeriod: false,
     nonce: Math.floor(Math.random() * 1000000),
     sessionID: randomSessionID(),
     chatObserver: new MutationObserver(ms => ms.forEach(m => { if (m.addedNodes.length) { bot.handleNewChatAppend(m.addedNodes) } })),
@@ -199,9 +200,16 @@ const bot: BotManager = {
         return true;
     },
 
-    isLastReset() {
-        const now = new Date(), h = now.getHours(), m = now.getMinutes();
-        return (h % 3 === 2 && m >= 36) || (h % 3 === 0 && m < 36)
+    isLastReset(shift = 0, now = new Date()) {
+        const h = now.getHours() - shift;
+        const m = now.getMinutes();
+        let mod = h % 3;
+
+        if (mod < 0) {
+            mod += 3;
+        }
+
+        return (mod === 2 && m >= 36) || (mod === 0 && m < 36);
     },
 
     mudaeTimeToMs(time: string) {
@@ -327,22 +335,7 @@ const bot: BotManager = {
         if (this.$chat == null) return;
 
         if (this.state === "idle") {
-            let msToStartResetHandler = 1;
-            const now = new Date();
-
-            if (now.getMinutes() !== 37) {
-                const nextReset = new Date(now);
-                nextReset.setHours(now.getMinutes() > 37 ? now.getHours() + 1 : now.getHours(), 37);
-                msToStartResetHandler = nextReset.getTime() - now.getTime();
-            }
-
             this.timers.set("think", this.think, INTERVAL_THINK, true);
-
-            this.timers.set("initHourlyResetHandler", () => {
-                bot.handleHourlyReset();
-                bot.timers.set("handleHourlyReset", bot.handleHourlyReset, 1 * 60 * 60 * 1000, true)
-            }, msToStartResetHandler);
-
             this.chatObserver.observe(this.$chat, { childList: true });
             this.state = "running";
             return;
@@ -360,9 +353,24 @@ const bot: BotManager = {
     think() {
         if (!bot.preferences) return;
 
-        const now = performance.now();
-        const dateNow = new Date(), h = dateNow.getHours(), m = dateNow.getMinutes();
+        const nowDate = new Date();
 
+        /// Handle hourly period reset
+        const currentPeriodHash = getPeriodHash(nowDate, 36);
+
+        if (currentPeriodHash !== bot.lastPeriodHash) {
+            bot.lastPeriodHash = currentPeriodHash;
+            bot.didWarnThisPeriod = false;
+
+            /// Forcing users to gather their info with /tu again
+            bot.users.forEach(user => user.info.delete(USER_INFO.ROLLS_LEFT));
+
+            return;
+        }
+
+        const now = performance.now();
+
+        /// Send /tu to gather info if needed
         if (!bot.hasNeededInfo()) {
             if (now - bot.cdGatherInfo < 1000) return;
 
@@ -402,26 +410,14 @@ const bot: BotManager = {
                 return;
             }
 
-            if (m > 38 && bot.isLastReset() && bot.getMarriageableUser()) {
-                const currentResetHash = `${dateNow.toDateString()} ${h}`;
+            if (!bot.didWarnThisPeriod && bot.isLastReset(0, nowDate) && bot.getMarriageableUser()) {
+                bot.didWarnThisPeriod = true;
 
-                if (bot.lastResetHash !== currentResetHash) {
-                    bot.lastResetHash = currentResetHash;
+                //# if isRollEnabled auto-use $us or $rolls
 
-                    //# if isRollEnabled auto-use $us or $rolls
-
-                    bot.log.warn("You have no more rolls, can still marry and it's the last reset.");
-                }
-
+                bot.log.warn("You have no more rolls, can still marry and it's the last reset.");
             }
         }
-    },
-
-    handleHourlyReset() {
-        if (!bot.hasNeededInfo()) return;
-
-        /// Forcing each user to gather their info with $tu again
-        bot.users.forEach(user => user.info.delete(USER_INFO.ROLLS_LEFT));
     },
 
     handleNewChatAppend(nodes) {

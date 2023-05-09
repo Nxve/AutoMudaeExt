@@ -54,3 +54,24 @@ export const randomSessionID = (): string => {
 export const reduceInnerArraysLength = (total: number, current: unknown[]) => total + current.length;
 
 export const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(() => resolve(), ms));
+
+export const getPeriodHash = (date: Date, intervalMinute: number): string => {
+    const start = new Date(date);
+    const end = new Date(date);
+
+    const hour = date.getHours();
+
+    start.setMinutes(intervalMinute, 0, 0); 
+    end.setMinutes(intervalMinute - 1, 59, 99); 
+
+    if (start.getTime() > date.getTime()) {
+      start.setHours(hour - 1);
+    } else {
+        end.setHours(hour + 1, intervalMinute - 1, 59);
+    }  
+  
+    const startTimestamp = start.getTime();
+    const endTimestamp = end.getTime();
+  
+    return `${startTimestamp}-${endTimestamp}`;
+  }

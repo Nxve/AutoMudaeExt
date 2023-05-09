@@ -49,19 +49,19 @@ export interface BotManager {
     nonce: number
     sessionID: string
     lastSeenMessageTime: number
-    lastResetHash: string
+    lastPeriodHash: string
+    didWarnThisPeriod: boolean
     chatObserver: MutationObserver
     lastErrorMessage?: string
 
     hasNeededInfo(): boolean
-    isLastReset(): boolean
+    isLastReset(shift?: number, now?: Date): boolean
     mudaeTimeToMs(time: string): number | null
     getMarriageableUser(priority?: {nicknames?: string[], userId?: string}): BotUser | null
     setup(): Promise<void>
     toggle(): void
     think(): void
     error(message: string): void
-    handleHourlyReset(): void
     handleNewChatAppend(nodes: NodeList): void
     getUserWithCriteria(cb: (user: BotUser) => boolean): BotUser | null
 
@@ -281,6 +281,7 @@ export class BotUser {
         return missingUserInfo;
     }
 
+    //# Instead of setting a timer to send /tu, delete some needed info for this user, just as in hourly resets
     setTUTimer(ms: number) {
         if (this.sendTUTimer) clearTimeout(this.sendTUTimer);
 
