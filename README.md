@@ -6,6 +6,7 @@ It is still in early development, thus unavailable in webstore.
 You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
 #### Roadmap to get it working:
+- Handle rolls with no buttons (Custom `$togglereact` config or unwished characters)
 - Notifications
     - Some of the events should trigger sound notifications
 - Guild Config:
@@ -41,10 +42,10 @@ You can expect it to be available for use after the completion of the below road
 - /rt
     - States: On | Off
     - Flags: For wishes | For sniping wishes | For interesting characters/series
+- /mk
 - Better logic/performance:
     - Handle hourly reset
     - Prevent tab from going inactive
     - Should only `think` after the previous think
-- Portability to other browsers
 
 ###### Initial boilerplate was created following instructions from [this LogRocket post](https://blog.logrocket.com/creating-chrome-extension-react-typescript/)
