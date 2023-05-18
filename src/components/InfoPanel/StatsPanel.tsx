@@ -1,6 +1,6 @@
-import type { Stats } from "../lib/bot/status_stats";
+import type { Stats } from "../../lib/bot/status_stats";
 import _ from "lodash";
-import { reduceInnerArraysLength } from "../lib/utils";
+import { reduceInnerArraysLength } from "../../lib/utils";
 
 interface IStatsPanelProps {
     stats: Stats

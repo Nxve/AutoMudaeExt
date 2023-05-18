@@ -1,10 +1,10 @@
-import type { InfoPanelType } from "../lib/app_types"
-import type { Logs } from "../lib/bot/log";
-import type { Stats, UserStatus } from "../lib/bot/status_stats";
+import type { InfoPanelType } from "../../lib/app_types"
+import type { Logs } from "../../lib/bot/log";
+import type { Stats, UserStatus } from "../../lib/bot/status_stats";
 import InfoList from "./InfoList";
 import StatusPanel from "./StatusPanel";
 import StatsPanel from "./StatsPanel";
-import "../styles/InfoPanel.css";
+import "../../styles/components/InfoPanel.css";
 
 interface IInfoPanelProps {
     infoType: NonNullable<InfoPanelType>

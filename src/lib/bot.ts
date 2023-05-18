@@ -1,5 +1,5 @@
 import type { BotEvent } from "./bot/event";
-import { INTERVAL_SEND_MESSAGE, MUDAE_USER_ID } from "./consts";
+import { INTERVAL_SEND_MESSAGE, MUDAE_CLAIM_RESET_DEFAULT, MUDAE_USER_ID } from "./consts";
 import { SVGS } from "./svgs";
 import { KAKERAS, SLASH_COMMANDS, SlashCommand } from "./mudae";
 import { minifyToken, sleep } from "./utils";
@@ -17,7 +17,10 @@ export interface Preferences {
     useUsers: PrefUseUsers;
     tokenList: Set<string>;
     snipeList: Set<string>;
-    language: PrefLanguage;
+    guild: {
+        language: PrefLanguage;
+        claimReset: number
+    }
     notifications: {
         type: PrefNotificationType
         enabled: Set<PrefNotification>
@@ -403,7 +406,10 @@ export const defaultPreferences = (): Preferences => ({
     useUsers: "logged",
     tokenList: new Set(),
     snipeList: new Set(),
-    language: "en",
+    guild: {
+        language: "en",
+        claimReset: MUDAE_CLAIM_RESET_DEFAULT
+    },
     notifications: {
         type: "sound",
         enabled: new Set()

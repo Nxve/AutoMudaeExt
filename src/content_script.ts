@@ -447,10 +447,10 @@ const bot: BotManager = {
 
                 if (botUser && messageContent) {
                     if (interactionInfo.command === "tu") {
-                        const matchRolls = LANG[bot.preferences.language].regex.tu_rolls.exec(messageContent);
-                        const matchRollsUs = LANG[bot.preferences.language].regex.tu_rolls_us.exec(messageContent);
-                        const matchPower = LANG[bot.preferences.language].regex.tu_power.exec(messageContent);
-                        const matchKakeraConsumption = LANG[bot.preferences.language].regex.tu_kakera_consumption.exec(messageContent);
+                        const matchRolls = LANG[bot.preferences.guild.language].regex.tu_rolls.exec(messageContent);
+                        const matchRollsUs = LANG[bot.preferences.guild.language].regex.tu_rolls_us.exec(messageContent);
+                        const matchPower = LANG[bot.preferences.guild.language].regex.tu_power.exec(messageContent);
+                        const matchKakeraConsumption = LANG[bot.preferences.guild.language].regex.tu_kakera_consumption.exec(messageContent);
 
                         if (matchRolls) {
                             const rolls = Number(matchRolls[1]);
@@ -496,8 +496,8 @@ const bot: BotManager = {
                             botUser.info.set(USER_INFO.CAN_RT, false);
                         }
 
-                        if (LANG[bot.preferences.language].regex.tu_marry.test(messageContent)) {
-                            const cantMarry = LANG[bot.preferences.language].regex.tu_cant_marry.test(messageContent);
+                        if (LANG[bot.preferences.guild.language].regex.tu_marry.test(messageContent)) {
+                            const cantMarry = LANG[bot.preferences.guild.language].regex.tu_cant_marry.test(messageContent);
 
                             botUser.info.set(USER_INFO.CAN_MARRY, !cantMarry);
                         }
@@ -527,7 +527,7 @@ const bot: BotManager = {
                 if (!characterName) {
                     /// Handle "no more rolls" messages
                     if (messageContent) {
-                        const noMoreRollsMatch = LANG[bot.preferences.language].regex.noMoreRolls.exec(messageContent);
+                        const noMoreRollsMatch = LANG[bot.preferences.guild.language].regex.noMoreRolls.exec(messageContent);
 
                         if (noMoreRollsMatch) {
                             if (botUser) {
@@ -548,7 +548,7 @@ const bot: BotManager = {
                 }
 
                 const $footer = $msg.querySelector("span[class^='embedFooterText']") as HTMLSpanElement | null;
-                const isOwned = !!($footer && $footer.innerText.includes(LANG[bot.preferences.language].string.ownedCharacter));
+                const isOwned = !!($footer && $footer.innerText.includes(LANG[bot.preferences.guild.language].string.ownedCharacter));
 
                 /// Decreases rolls count && handle new soulmates
                 if (botUser) {
@@ -566,7 +566,7 @@ const bot: BotManager = {
 
                     const $embedDescription = $msg.querySelector("div[class^='embedDescription']") as HTMLElement | null;
 
-                    if ($embedDescription && $embedDescription.innerText.includes(LANG[bot.preferences.language].string.newSoulmate)) {
+                    if ($embedDescription && $embedDescription.innerText.includes(LANG[bot.preferences.guild.language].string.newSoulmate)) {
                         bot.log.event(EVENTS.SOULMATE, { character: characterName, user: botUser.username });
                     }
                 }
@@ -686,9 +686,9 @@ const bot: BotManager = {
 
             if (messageContent) {
                 /// Handle character claims & steals
-                const characterClaimMatch = LANG[bot.preferences.language].regex.marry_notification.exec(messageContent.trim());
+                const characterClaimMatch = LANG[bot.preferences.guild.language].regex.marry_notification.exec(messageContent.trim());
 
-                if (characterClaimMatch || messageContent.includes(LANG[bot.preferences.language].string.silver4Bonus)) {
+                if (characterClaimMatch || messageContent.includes(LANG[bot.preferences.guild.language].string.silver4Bonus)) {
                     let usernameThatClaimed: string | undefined;
                     let characterName: string | undefined;
                     let botUserThatClaimed: BotUser | null = null;

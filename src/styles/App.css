@@ -171,40 +171,6 @@ label {
   color: var(--red-400) !important;
 }
 
-input[type=range] {
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-input[type=range]::-webkit-slider-runnable-track {
-  --fillColor: var(--brand-500);
-  --bgColor: var(--primary-400);
-  width: 300px;
-  height: 5px;
-  background: linear-gradient(to right, var(--fillColor) 0%, var(--fillColor) var(--value), var(--bgColor) var(--value), var(--bgColor) 100%);
-  border: none;
-  border-radius: 3px;
-}
-
-input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 10px;
-  height: 18px;
-  top: 50%;
-  margin-top: -6px;
-  border-radius: 3px;
-  background-color: var(--white-500);
-  border: 1px solid var(--primary-200);
-  -webkit-box-shadow: 0 3px 1px 0 hsl(var(--black-500-hsl)/.05), 0 2px 2px 0 hsl(var(--black-500-hsl)/.1), 0 3px 3px 0 hsl(var(--black-500-hsl)/.05);
-  box-shadow: 0 3px 1px 0 hsl(var(--black-500-hsl)/.05), 0 2px 2px 0 hsl(var(--black-500-hsl)/.1), 0 3px 3px 0 hsl(var(--black-500-hsl)/.05);
-  cursor: ew-resize;
-}
-
-input[type=range]:focus {
-  outline: none;
-}
-
 .kakera-cfg>span {
   font-size: .8rem;
 }

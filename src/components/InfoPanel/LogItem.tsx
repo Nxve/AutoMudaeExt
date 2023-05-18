@@ -1,7 +1,7 @@
-import type { BotLog, ErrorLog, EventLog, WarnLog } from "../lib/bot/log";
-import { LOG_TYPES } from "../lib/bot/log";
-import { EVENTS } from "../lib/bot/event";
-import { MUDAE_SILVERIV_KAKERA_BONUS } from "../lib/consts";
+import type { BotLog, ErrorLog, EventLog, WarnLog } from "../../lib/bot/log";
+import { LOG_TYPES } from "../../lib/bot/log";
+import { EVENTS } from "../../lib/bot/event";
+import { MUDAE_SILVERIV_KAKERA_BONUS } from "../../lib/consts";
 
 //# Add icons, colors and such (Kakera type as icon)
 function EventContent({ eventLog }: { eventLog: EventLog }) {

@@ -1,7 +1,7 @@
 import type { InfoPanelType } from "../lib/app_types";
 import type { Unseen } from "../lib/bot/log";
 import { SVGS } from "../lib/svgs";
-import "../styles/NavBar.css";
+import "../styles/components/NavBar.css";
 
 interface INavBarProps {
     showStatusButton: boolean

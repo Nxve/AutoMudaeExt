@@ -1,5 +1,5 @@
-import type { UserStatus } from "../lib/bot/status_stats";
-import { USER_INFO } from "../lib/bot";
+import type { UserStatus } from "../../lib/bot/status_stats";
+import { USER_INFO } from "../../lib/bot";
 
 interface IStatusPanelProps {
     userStatus: UserStatus

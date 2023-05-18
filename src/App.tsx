@@ -13,9 +13,12 @@ import { SVGS } from "./lib/svgs";
 import { KAKERAS } from "./lib/mudae";
 import InfoPanel from "./components/InfoPanel";
 import NavBar from "./components/NavBar";
+import Range from "./components/Range";
 import React, { useCallback, useEffect, useState } from "react";
 import "./styles/App.css";
-import { DISCORD_NICK_MAX, DISCORD_NICK_MIN } from "./lib/consts";
+import { DISCORD_NICK_MAX, DISCORD_NICK_MIN, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN } from "./lib/consts";
+import ItemsWrapper from "./components/ItemsWrapper";
+import Item from "./components/Item";
 
 function App() {
   /// App state
@@ -42,7 +45,7 @@ function App() {
 
   /// GUI
 
-  const isWide = menuCategory === "bot" && (menuSubcategory === "tokenlist" || menuSubcategory === "kakera");
+  const isWide = menuCategory === "guild" || (menuCategory === "bot" && (menuSubcategory === "tokenlist" || menuSubcategory === "kakera"));
 
   const tokenListAdd = () => {
     tokenList.push("");
@@ -66,7 +69,7 @@ function App() {
     } else {
       const arrTokenList = [...preferences.tokenList];
 
-      if (isValid){
+      if (isValid) {
         arrTokenList.splice(index, 1, token);
       } else {
         arrTokenList.splice(index, 1);
@@ -103,7 +106,7 @@ function App() {
     } else {
       const arrSnipeList = [...preferences.snipeList];
 
-      if (isValid){
+      if (isValid) {
         arrSnipeList.splice(index, 1, nick);
       } else {
         arrSnipeList.splice(index, 1);
@@ -212,7 +215,7 @@ function App() {
 
   /// BOT
 
-  const canToggleRun = (): boolean => {
+  const canToggleRun: boolean = (() => {
     if (botState !== "idle" && botState !== "running" && botState !== "waiting_injection") {
       return false;
     }
@@ -232,7 +235,7 @@ function App() {
     }
 
     return true;
-  };
+  })();
 
   const sendTabMessage = (tab: chrome.tabs.Tab | number, messageId: MessageID, data: any, cb: (response?: any) => void) => {
     const tabId = (typeof tab !== "number") ? tab.id : tab;
@@ -317,7 +320,6 @@ function App() {
         }
         break;
       case MESSAGES.BOT.STORE_USERNAME:
-        console.log("Received", message.data);
         const { username, token } = message.data as { username: string, token: string };
 
         usernames[token] = username;
@@ -437,16 +439,8 @@ function App() {
             <img src="128.png" alt="App Icon" />
             <span>AutoMudae</span>
           </header>
-          <div className="item-wrapper">
-            <button {...(menuCategory === "bot" && { className: "toggle" })} onClick={() => toggleMenuCategory("bot")}>
-              {SVGS.GEAR}
-              <span>Bot Config</span>
-              {SVGS.ARROW}
-            </button>
-          </div>
-          {
-            menuCategory === "bot" &&
-            <>
+          <ItemsWrapper currentMenuCategory={menuCategory} toggleMenuCategory={toggleMenuCategory}>
+            <Item category="bot" label="Bot Config">
               <div className="item-wrapper inner-0">
                 <span>Use</span>
                 <select value={preferences.useUsers} onChange={(e) => setPreferences({ ...preferences, useUsers: e.target.value as PrefUseUsers })}>
@@ -523,12 +517,15 @@ function App() {
                   <div className="item-wrapper inner-1">
                     <span>Delay</span>
                     <span>{preferences.claim.delay}s</span>
-                    <input type="range" min={0} max={8.1} step={.1} value={preferences.claim.delay}
-                      style={{ "--value": (preferences.claim.delay * 100 / 8.1) + "%" } as React.CSSProperties}
+                    <Range
+                      max={8.1}
+                      step={.1}
+                      value={preferences.claim.delay}
                       onChange={(e) => {
                         const delay = Number(e.target.value);
                         setPreferences({ ...preferences, claim: { delay: delay, delayRandom: delay > 0 ? preferences.claim.delayRandom : false } })
-                      }} />
+                      }}
+                    />
                   </div>
                   <div className="item-wrapper inner-1" data-tooltip="Random delay between 0 and the config">
                     <span>Random</span>
@@ -580,14 +577,17 @@ function App() {
                   <div className="item-wrapper inner-1">
                     <span>Delay</span>
                     <span>{preferences.kakera.delay}s</span>
-                    <input type="range" min={0} max={8.1} step={.1} value={preferences.kakera.delay}
-                      style={{ "--value": (preferences.kakera.delay * 100 / 8.1) + "%" } as React.CSSProperties}
+                    <Range
+                      max={8.1}
+                      step={.1}
+                      value={preferences.kakera.delay}
                       onChange={(e) => {
                         const delay = Number(e.target.value);
                         preferences.kakera.delay = delay;
                         preferences.kakera.delayRandom = delay > 0 ? preferences.kakera.delayRandom : false;
                         setPreferences({ ...preferences });
-                      }} />
+                      }}
+                    />
                   </div>
                   <div className="item-wrapper inner-1" data-tooltip="Random delay between 0 and the config">
                     <span>Random</span>
@@ -664,58 +664,45 @@ function App() {
                   </div>
                 </>
               }
-            </>
-          }
-          <div className="item-wrapper">
-            <button {...(menuCategory === "guild" && { className: "toggle" })} onClick={() => toggleMenuCategory("guild")}>
-              {SVGS.GEAR}
-              <span>Guild Config</span>
-              {SVGS.ARROW}
-            </button>
-          </div>
-          {
-            menuCategory === "guild" &&
-            <>
+            </Item>
+            <Item category="guild" label="Guild Config">
               <div className="item-wrapper inner-0">
                 <span>Language</span>
-                <select value={preferences.language} onChange={(e) => setPreferences({ ...preferences, language: e.target.value as PrefLanguage })}>
+                <select value={preferences.guild.language} onChange={(e) => { preferences.guild.language = e.target.value as PrefLanguage; setPreferences({ ...preferences }) }}>
                   <option value="en">English</option>
                   <option value="fr">Français</option>
                   <option value="es">Español</option>
                   <option value="pt_br">Português</option>
                 </select>
               </div>
-            </>
-          }
-          <div className="item-wrapper">
-            <button {...(menuCategory === "extra" && { className: "toggle" })} onClick={() => toggleMenuCategory("extra")}>
-              {SVGS.GEAR}
-              <span>Extra</span>
-              {SVGS.ARROW}
-            </button>
-          </div>
-          {
-            menuCategory === "extra" &&
-            <>
+              <div className="item-wrapper inner-0">
+                <span>Claim reset</span>
+                <span>{preferences.guild.claimReset}min</span>
+                <Range
+                  min={MUDAE_CLAIM_RESET_MIN}
+                  max={MUDAE_CLAIM_RESET_MAX}
+                  value={preferences.guild.claimReset}
+                  onChange={(e) => {
+                    preferences.guild.claimReset = Number(e.target.value);
+                    setPreferences({ ...preferences });
+                  }} />
+              </div>
+            </Item>
+            <Item category="extra" label="Extra">
               <div className="item-wrapper inner-0">
                 <button onClick={reset}>Reset all config</button>
               </div>
               <div className="item-wrapper inner-0">
                 <button onClick={clearCache}>Clear cache</button>
               </div>
-            </>
-          }
+            </Item>
+          </ItemsWrapper>
           {
             discordTab &&
             <div className="item-wrapper">
-              {/* //# Replace these calls */}
               <button
-                {... !canToggleRun() && {
-                  disabled: true,
-                  ...(getCantRunReason() && {
-                    "data-tooltip": getCantRunReason()
-                  })
-                }}
+                disabled={!canToggleRun}
+                data-tooltip={canToggleRun ? null : getCantRunReason() || null}
                 onClick={toggleRun}
               >
                 {BOT_STATES[botState].buttonSVG && SVGS[BOT_STATES[botState].buttonSVG as keyof typeof SVGS]}
