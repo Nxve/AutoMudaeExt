@@ -16,7 +16,7 @@ import NavBar from "./components/NavBar";
 import Range from "./components/Range";
 import React, { useCallback, useEffect, useState } from "react";
 import "./styles/App.css";
-import { DISCORD_NICK_MAX, DISCORD_NICK_MIN, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN } from "./lib/consts";
+import { DISCORD_NICK_MAX, DISCORD_NICK_MIN, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN, VERSION_MAJOR, VERSION_MINOR } from "./lib/consts";
 import ItemsWrapper from "./components/ItemsWrapper";
 import Item from "./components/Item";
 
@@ -356,11 +356,22 @@ function App() {
       .then(result => {
         if (Object.hasOwn(result, "preferences")) {
           const loadedPreferences: Preferences = JSON.parse(result.preferences, jsonMapSetReviver);
+          const verMajor: number | undefined = loadedPreferences.versionMajor;
+          const verMinor: number | undefined = loadedPreferences.versionMinor;
 
-          setPreferences(loadedPreferences);
-          setTokenList([...loadedPreferences.tokenList]);
-          setSnipeList([...loadedPreferences.snipeList]);
-          console.log("Loaded preferences.", loadedPreferences);
+          const isPrefVersionUpToDate = verMajor != null && verMajor === VERSION_MAJOR;
+
+          if (isPrefVersionUpToDate){
+            setPreferences(loadedPreferences);
+            setTokenList([...loadedPreferences.tokenList]);
+            setSnipeList([...loadedPreferences.snipeList]);
+
+            console.log("Loaded preferences.", loadedPreferences);
+          } else {
+            console.log(`Preferences were outdated. Preferences version: v${verMajor}.${verMinor || "?"}. Current version: v${VERSION_MAJOR}.${VERSION_MINOR}`);
+            
+            chrome?.storage?.local.remove("preferences");
+          }          
         }
 
         if (Object.hasOwn(result, "usernames")) {

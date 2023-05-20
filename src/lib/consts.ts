@@ -1,4 +1,6 @@
 /// Bot
+export const VERSION_MAJOR = 0;
+export const VERSION_MINOR = 1;
 export const INTERVAL_SEND_MESSAGE = 1500;
 export const INTERVAL_THINK = 200;
 export const INTERVAL_ROLL = 1500;
