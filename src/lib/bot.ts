@@ -42,6 +42,7 @@ export interface Preferences {
 
 export interface BotManager {
     state: BotState
+    isThinking: boolean
     preferences: Preferences | null
     $chat: HTMLElement | null
     info: Map<typeof DISCORD_INFO[keyof typeof DISCORD_INFO], string>

@@ -17,6 +17,7 @@ const chromeMessageQueue = new ChromeMessageQueue();
 
 const bot: BotManager = {
     state: "waiting_injection",
+    isThinking: false,
     preferences: null,
     $chat: null,
     info: new Map(),
@@ -125,8 +126,8 @@ const bot: BotManager = {
                     }
                 }
 
+                /// No more messages to search for the avatar
                 if (!$avatar && !$targetMessage) {
-                    /// No more messages to search for the avatar
                     break;
                 }
             }
@@ -134,7 +135,13 @@ const bot: BotManager = {
             if ($avatar) {
                 const match = /avatars\/(\d+)\//.exec($avatar.src);
 
-                if (match) return match[1];
+                if (match) {
+                    const authorId = match[1];
+
+                    this._MessageAuthorCache.set($message, authorId);
+
+                    return authorId;
+                }
             }
 
             /// Couldn't get avatar from messages, which would be really strange
@@ -143,12 +150,18 @@ const bot: BotManager = {
 
             const message = await this.get($message);
 
-            return message ? message.author.id : null;
+            if (message){
+                this._MessageAuthorCache.set($message, message.author.id);
+
+                return message.author.id;
+            }
+
+            return null;
         },
         async isFromMudae($message) {
             const messageAuthorId = await this.getAuthorId($message);
 
-            return (messageAuthorId != null && messageAuthorId === MUDAE_USER_ID);
+            return messageAuthorId === MUDAE_USER_ID;
         },
         async getInteractionInfo($message) {
             const $avatar = $message.querySelector("img[class^='executedCommandAvatar']") as HTMLImageElement | null;
@@ -335,8 +348,17 @@ const bot: BotManager = {
         if (this.$chat == null) return;
 
         if (this.state === "idle") {
-            this.timers.set("think", this.think, INTERVAL_THINK, true);
+            this.timers.set("think", () => {
+                if (bot.isThinking) return;
+                bot.isThinking = true;
+
+                this.think();
+
+                bot.isThinking = false;
+            }, INTERVAL_THINK, true);
+
             this.chatObserver.observe(this.$chat, { childList: true });
+
             this.state = "running";
             return;
         }
@@ -351,6 +373,7 @@ const bot: BotManager = {
     },
 
     think() {
+        //# Throw
         if (!bot.preferences) return;
 
         const nowDate = new Date();
@@ -423,11 +446,8 @@ const bot: BotManager = {
     handleNewChatAppend(nodes) {
         document.querySelector("div[class^='scrollerSpacer']")?.scrollIntoView();
 
-        nodes.forEach(async _node => {
-            if (!bot.preferences) {
-                bot.error("Couldn't find preferences when handling new chat message.");
-                return;
-            }
+        nodes.forEach(async _node => { 
+            if (!bot.preferences) return;            
 
             const $msg = _node as HTMLElement;
 
@@ -543,7 +563,7 @@ const bot: BotManager = {
                         }
                     }
 
-                    bot.log.error("Couldn't get character name from message [?]", false); //# Add reference to message
+                    bot.log.error("Couldn't get character name from message <NotImplementedReference>", false); //# Add reference to message
                     return;
                 }
 
