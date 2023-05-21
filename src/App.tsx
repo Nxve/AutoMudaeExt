@@ -17,8 +17,7 @@ import Range from "./components/Range";
 import React, { useCallback, useEffect, useState } from "react";
 import "./styles/App.css";
 import { DISCORD_NICK_MAX, DISCORD_NICK_MIN, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN, VERSION_MAJOR, VERSION_MINOR } from "./lib/consts";
-import ItemsWrapper from "./components/ItemsWrapper";
-import Item from "./components/Item";
+import { ItemsWrapper, Item } from "./components/Items";
 
 function App() {
   /// App state
@@ -361,7 +360,7 @@ function App() {
 
           const isPrefVersionUpToDate = verMajor != null && verMajor === VERSION_MAJOR;
 
-          if (isPrefVersionUpToDate){
+          if (isPrefVersionUpToDate) {
             setPreferences(loadedPreferences);
             setTokenList([...loadedPreferences.tokenList]);
             setSnipeList([...loadedPreferences.snipeList]);
@@ -369,9 +368,9 @@ function App() {
             console.log("Loaded preferences.", loadedPreferences);
           } else {
             console.log(`Preferences were outdated. Preferences version: v${verMajor}.${verMinor || "?"}. Current version: v${VERSION_MAJOR}.${VERSION_MINOR}`);
-            
+
             chrome?.storage?.local.remove("preferences");
-          }          
+          }
         }
 
         if (Object.hasOwn(result, "usernames")) {
@@ -450,58 +449,65 @@ function App() {
             <img src="128.png" alt="App Icon" />
             <span>AutoMudae</span>
           </header>
-          <ItemsWrapper currentMenuCategory={menuCategory} toggleMenuCategory={toggleMenuCategory}>
+          <ItemsWrapper
+            currentMenuCategory={menuCategory}
+            currentMenuSubcategory={menuSubcategory}
+            toggleMenuCategory={toggleMenuCategory}
+            toggleMenuSubcategory={toggleMenuSubcategory}
+          >
             <Item category="bot" label="Bot Config">
-              <div className="item-wrapper inner-0">
-                <span>Use</span>
-                <select value={preferences.useUsers} onChange={(e) => setPreferences({ ...preferences, useUsers: e.target.value as PrefUseUsers })}>
-                  <option value="logged">Logged users</option>
-                  <option value="tokenlist">Token list</option>
-                </select>
-              </div>
-              {
-                preferences.useUsers === "tokenlist" &&
-                <>
-                  <div className="item-wrapper inner-0">
-                    <span>Token List</span>
-                    <div className="flex-inline-wrapper">
-                      {
-                        menuSubcategory === "tokenlist" &&
-                        <>
-                          <button className="button-red" data-tooltip="Clear" onClick={tokenListClear}>
-                            {SVGS.X}
-                          </button>
-                          <button className="button-green" data-tooltip="Add" onClick={tokenListAdd}>
-                            {SVGS.PLUS}
-                          </button>
-                        </>
-                      }
-                      <button {...(menuSubcategory === "tokenlist" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("tokenlist")}>
-                        {SVGS.ARROW}
-                      </button>
-                    </div>
-                  </div>
-                  {
-                    menuSubcategory === "tokenlist" &&
-                    <div className="item-wrapper inner-1">
-                      <div id="tokenlist" className="list">
-                        {tokenList.map((token, i) =>
-                          <div data-rollup-text={usernames[token]}>
-                            <input
-                              type="text"
-                              spellCheck="false"
-                              value={token}
-                              onChange={(e) => { tokenList[i] = e.target.value; setTokenList([...tokenList]) }}
-                              onBlur={(e) => validateTokenInput(i, e.target.value)}
-                              key={`token-${i}`}
-                            />
-                          </div>
-                        )}
+              <>
+                <div className="item-wrapper inner-0">
+                  <span>Use</span>
+                  <select value={preferences.useUsers} onChange={(e) => setPreferences({ ...preferences, useUsers: e.target.value as PrefUseUsers })}>
+                    <option value="logged">Logged users</option>
+                    <option value="tokenlist">Token list</option>
+                  </select>
+                </div>
+                {
+                  preferences.useUsers === "tokenlist" &&
+                  <>
+                    <div className="item-wrapper inner-0">
+                      <span>Token List</span>
+                      <div className="flex-inline-wrapper">
+                        {
+                          menuSubcategory === "tokenlist" &&
+                          <>
+                            <button className="button-red" data-tooltip="Clear" onClick={tokenListClear}>
+                              {SVGS.X}
+                            </button>
+                            <button className="button-green" data-tooltip="Add" onClick={tokenListAdd}>
+                              {SVGS.PLUS}
+                            </button>
+                          </>
+                        }
+                        <button {...(menuSubcategory === "tokenlist" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("tokenlist")}>
+                          {SVGS.ARROW}
+                        </button>
                       </div>
                     </div>
-                  }
-                </>
-              }
+                    {
+                      menuSubcategory === "tokenlist" &&
+                      <div className="item-wrapper inner-1">
+                        <div id="tokenlist" className="list">
+                          {tokenList.map((token, i) =>
+                            <div data-rollup-text={usernames[token]}>
+                              <input
+                                type="text"
+                                spellCheck="false"
+                                value={token}
+                                onChange={(e) => { tokenList[i] = e.target.value; setTokenList([...tokenList]) }}
+                                onBlur={(e) => validateTokenInput(i, e.target.value)}
+                                key={`token-${i}`}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    }
+                  </>
+                }
+              </>
               <div className="item-wrapper inner-0">
                 <span>Roll</span>
                 <div className="flex-inline-wrapper">
@@ -516,14 +522,7 @@ function App() {
                   </select>
                 </div>
               </div>
-              <div className="item-wrapper inner-0">
-                <span>Claim</span>
-                <button {...(menuSubcategory === "claim" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("claim")}>
-                  {SVGS.ARROW}
-                </button>
-              </div>
-              {
-                menuSubcategory === "claim" &&
+              <Item category="claim" label="Claim">
                 <>
                   <div className="item-wrapper inner-1">
                     <span>Delay</span>
@@ -543,15 +542,8 @@ function App() {
                     <input type="checkbox" checked={preferences.claim.delayRandom} disabled={preferences.claim.delay === 0} onChange={(e) => setPreferences(pref => { pref.claim.delayRandom = e.target.checked; return { ...pref } })} />
                   </div>
                 </>
-              }
-              <div className="item-wrapper inner-0">
-                <span>Kakera</span>
-                <button {...(menuSubcategory === "kakera" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("kakera")}>
-                  {SVGS.ARROW}
-                </button>
-              </div>
-              {
-                menuSubcategory === "kakera" &&
+              </Item>
+              <Item category="kakera" label="Kakera">
                 <>
                   {(preferences.useUsers === "tokenlist" ? [...preferences.kakera.perToken.keys()] : ["all"]).map((token, i) =>
                     <div className="item-wrapper inner-1 kakera-cfg" key={`kkcfg-${i}`}>
@@ -605,7 +597,7 @@ function App() {
                     <input type="checkbox" checked={preferences.kakera.delayRandom} disabled={preferences.kakera.delay === 0} onChange={(e) => setPreferences(pref => { pref.kakera.delayRandom = e.target.checked; return { ...pref } })} />
                   </div>
                 </>
-              }
+              </Item>
               <>
                 <div className="item-wrapper inner-0">
                   <span>Snipe targets</span>
@@ -644,14 +636,7 @@ function App() {
                   </div>
                 }
               </>
-              <div className="item-wrapper inner-0">
-                <span>Notifications</span>
-                <button {...(menuSubcategory === "notifications" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("notifications")}>
-                  {SVGS.ARROW}
-                </button>
-              </div>
-              {
-                menuSubcategory === "notifications" &&
+              <Item category="notifications" label="Notifications">
                 <>
                   <div className="item-wrapper inner-1">
                     <span>Notification type</span>
@@ -674,7 +659,7 @@ function App() {
                     </div>
                   </div>
                 </>
-              }
+              </Item>
             </Item>
             <Item category="guild" label="Guild Config">
               <div className="item-wrapper inner-0">
