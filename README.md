@@ -20,7 +20,6 @@ You can expect it to be available for use after the completion of the below road
         - /tu exposing every needed info
 
 #### Secondary plans:
-- List of interesting characters/series
 - Account management:
     - $givek: Transfer kakera between users
     - $wp: Remove claimed wishes
@@ -46,6 +45,5 @@ You can expect it to be available for use after the completion of the below road
 - Better logic/performance:
     - Handle hourly reset
     - Prevent tab from going inactive
-    - Should only `think` after the previous think
 
 ###### Initial boilerplate was created following instructions from [this LogRocket post](https://blog.logrocket.com/creating-chrome-extension-react-typescript/)
