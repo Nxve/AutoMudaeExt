@@ -15,7 +15,8 @@ interface IItemsWrapperProps {
 export function ItemsWrapper(props: IItemsWrapperProps) {
     return (
         <>
-            {props.children.map(child => React.cloneElement(child, {
+            {props.children.map((child, i) => React.cloneElement(child, {
+                key: `menuitem-${i}`,
                 currentMenuCategory: props.currentMenuCategory,
                 currentMenuSubcategory: props.currentMenuSubcategory,
                 toggleMenuCategory: props.toggleMenuCategory,
