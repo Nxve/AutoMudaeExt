@@ -16,7 +16,7 @@ import NavBar from "./components/NavBar";
 import Range from "./components/Range";
 import React, { useCallback, useEffect, useState } from "react";
 import "./styles/App.css";
-import { DISCORD_NICK_MAX, DISCORD_NICK_MIN, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN, VERSION_MAJOR, VERSION_MINOR } from "./lib/consts";
+import { DISCORD_EMBED_FIELD_MAX, DISCORD_EMBED_FIELD_MIN, DISCORD_NICK_MAX, DISCORD_NICK_MIN, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN, VERSION_MAJOR, VERSION_MINOR } from "./lib/consts";
 import { ItemsWrapper, Item } from "./components/Items";
 
 function App() {
@@ -26,7 +26,9 @@ function App() {
   const [infoPanel, setInfoPanel] = useState<InfoPanelType>(null);
   const [configuringKakeraPerToken, setConfiguringKakeraPerToken] = useState("");
   const [tokenList, setTokenList] = useState<string[]>([]);
-  const [snipeList, setSnipeList] = useState<string[]>([]);
+  const [targetUsersList, setTargetUsersList] = useState<string[]>([]);
+  const [characterList, setCharacterList] = useState<string[]>([]);
+  const [seriesList, setSeriesList] = useState<string[]>([]);
   const [usernames, setUsernames] = useState<{ [token: string]: string }>({});
   const [hasJustLoadedPreferences, setJustLoadedPreferences] = useState(false);
   const [didMount, setDidMount] = useState(false);
@@ -44,78 +46,120 @@ function App() {
 
   /// GUI
 
-  const isWide = menuCategory === "guild" || (menuCategory === "bot" && (menuSubcategory === "tokenlist" || menuSubcategory === "kakera"));
+  const isWide = menuCategory === "guild" || (menuCategory === "general" && (menuSubcategory === "tokenlist" || menuSubcategory === "kakera"));
 
-  const tokenListAdd = () => {
-    tokenList.push("");
-    setTokenList([...tokenList]);
+  const listAdd = (listId: string) => {
+    switch (listId) {
+      case "token_list":
+        tokenList.push("");
+        setTokenList([...tokenList]);
+        break;
+      case "target_users":
+        targetUsersList.push("");
+        setTargetUsersList([...targetUsersList]);
+        break;
+      case "character_list":
+        characterList.push("");
+        setCharacterList([...characterList]);
+        break;
+      case "series_list":
+        seriesList.push("");
+        setSeriesList([...seriesList]);
+        break;
+      default:
+        break;
+    }
   };
 
-  const tokenListClear = () => {
-    preferences.tokenList = new Set();
-    setPreferences({ ...preferences });
-    setTokenList([]);
-  };
-
-  const validateTokenInput = (index: number, token: string) => {
-    const isValid = isTokenValid(token);
-
-    if (index >= preferences.tokenList.size) {
-      if (isValid) {
-        preferences.tokenList.add(token);
-        setPreferences({ ...preferences });
-      }
-    } else {
-      const arrTokenList = [...preferences.tokenList];
-
-      if (isValid) {
-        arrTokenList.splice(index, 1, token);
-      } else {
-        arrTokenList.splice(index, 1);
-      }
-
-      preferences.tokenList = new Set(arrTokenList);
-      setPreferences({ ...preferences });
+  const listClear = (listId: string) => {
+    switch (listId) {
+      case "token_list":
+        preferences.tokenList = new Set();
+        setTokenList([]);
+        break;
+      case "target_users":
+        preferences.claim.targetUsersList = new Set();
+        setTargetUsersList([]);
+        break;
+      case "character_list":
+        preferences.claim.characterList = new Set();
+        setCharacterList([]);
+        break;
+      case "series_list":
+        preferences.claim.seriesList = new Set();
+        setSeriesList([]);
+        break;
+      default:
+        break;
     }
 
-    setTokenList([...preferences.tokenList]);
-  };
-
-  const snipeListAdd = () => {
-    snipeList.push("");
-    setSnipeList([...snipeList]);
-  };
-
-  const snipeListClear = () => {
-    preferences.snipeList = new Set();
     setPreferences({ ...preferences });
-    setSnipeList([]);
   };
 
-  const validateSnipeInput = (index: number, nick: string) => {
-    nick = nick.trim();
+  const validateListInput = (index: number, input: string, listId: string) => {
+    if (listId === "target_users" || listId === "character_list" || listId === "series_list") {
+      const isTargetUsersList = listId === "target_users";
 
-    const isValid = nick.length >= DISCORD_NICK_MIN && nick.length <= DISCORD_NICK_MAX;
+      const min = isTargetUsersList ? DISCORD_NICK_MIN : DISCORD_EMBED_FIELD_MIN;
+      const max = isTargetUsersList ? DISCORD_NICK_MAX : DISCORD_EMBED_FIELD_MAX;
 
-    if (index >= preferences.snipeList.size) {
-      if (isValid) {
-        preferences.snipeList.add(nick);
+      const isValid = input.length >= min && input.length <= max;
+
+      const listMap = {
+        "target_users": { setter: setTargetUsersList, set: preferences.claim.targetUsersList },
+        "character_list": { setter: setCharacterList, set: preferences.claim.characterList },
+        "series_list": { setter: setSeriesList, set: preferences.claim.seriesList }
+      };
+
+      const targetSet = listMap[listId].set;
+      const targetSetter = listMap[listId].setter;
+
+      if (index >= targetSet.size) {
+        if (isValid) {
+          targetSet.add(input);
+          setPreferences({ ...preferences });
+        }
+      } else {
+        const arrInputList = [...targetSet];
+
+        if (isValid) {
+          arrInputList.splice(index, 1, input);
+        } else {
+          arrInputList.splice(index, 1);
+        }
+
+        targetSet.clear();
+
+        arrInputList.forEach(input => targetSet.add(input));
+
         setPreferences({ ...preferences });
       }
-    } else {
-      const arrSnipeList = [...preferences.snipeList];
 
-      if (isValid) {
-        arrSnipeList.splice(index, 1, nick);
+      targetSetter([...targetSet]);
+    } else if (listId === "token_list") {
+      const token = input;
+      const isValid = isTokenValid(token);
+
+      if (index >= preferences.tokenList.size) {
+        if (isValid) {
+          preferences.tokenList.add(token);
+          setPreferences({ ...preferences });
+        }
       } else {
-        arrSnipeList.splice(index, 1);
+        const arrTokenList = [...preferences.tokenList];
+
+        if (isValid) {
+          arrTokenList.splice(index, 1, token);
+        } else {
+          arrTokenList.splice(index, 1);
+        }
+
+        preferences.tokenList = new Set(arrTokenList);
+        setPreferences({ ...preferences });
       }
 
-      preferences.snipeList = new Set(arrSnipeList);
-      setPreferences({ ...preferences });
+      setTokenList([...preferences.tokenList]);
     }
-
-    setSnipeList([...preferences.snipeList]);
   };
 
   const handleSoundToggle: React.ChangeEventHandler<HTMLInputElement> = (e) => {
@@ -202,7 +246,9 @@ function App() {
     setConfiguringKakeraPerToken("");
     setPreferences(defaultPreferences());
     setTokenList([]);
-    setSnipeList([]);
+    setTargetUsersList([]);
+    setCharacterList([]);
+    setSeriesList([]);
   };
 
   const clearCache = () => {
@@ -363,7 +409,9 @@ function App() {
           if (isPrefVersionUpToDate) {
             setPreferences(loadedPreferences);
             setTokenList([...loadedPreferences.tokenList]);
-            setSnipeList([...loadedPreferences.snipeList]);
+            setTargetUsersList([...loadedPreferences.claim.targetUsersList]);
+            setCharacterList([...loadedPreferences.claim.characterList]);
+            setSeriesList([...loadedPreferences.claim.seriesList]);
 
             console.log("Loaded preferences.", loadedPreferences);
           } else {
@@ -455,7 +503,7 @@ function App() {
             toggleMenuCategory={toggleMenuCategory}
             toggleMenuSubcategory={toggleMenuSubcategory}
           >
-            <Item category="bot" label="Bot Config">
+            <Item category="general" label="General Config">
               <>
                 <div className="item-wrapper inner-0">
                   <span>Use</span>
@@ -473,10 +521,10 @@ function App() {
                         {
                           menuSubcategory === "tokenlist" &&
                           <>
-                            <button className="button-red" data-tooltip="Clear" onClick={tokenListClear}>
+                            <button className="button-red" data-tooltip="Clear" onClick={() => listClear("token_list")}>
                               {SVGS.X}
                             </button>
-                            <button className="button-green" data-tooltip="Add" onClick={tokenListAdd}>
+                            <button className="button-green" data-tooltip="Add" onClick={() => listAdd("token_list")}>
                               {SVGS.PLUS}
                             </button>
                           </>
@@ -497,7 +545,7 @@ function App() {
                                 spellCheck="false"
                                 value={token}
                                 onChange={(e) => { tokenList[i] = e.target.value; setTokenList([...tokenList]) }}
-                                onBlur={(e) => validateTokenInput(i, e.target.value)}
+                                onBlur={(e) => validateListInput(i, e.target.value, "token_list")}
                                 key={`token-${i}`}
                               />
                             </div>
@@ -522,27 +570,6 @@ function App() {
                   </select>
                 </div>
               </div>
-              <Item category="claim" label="Claim">
-                <>
-                  <div className="item-wrapper inner-1">
-                    <span>Delay</span>
-                    <span>{preferences.claim.delay}s</span>
-                    <Range
-                      max={8.1}
-                      step={.1}
-                      value={preferences.claim.delay}
-                      onChange={(e) => {
-                        const delay = Number(e.target.value);
-                        setPreferences({ ...preferences, claim: { delay: delay, delayRandom: delay > 0 ? preferences.claim.delayRandom : false } })
-                      }}
-                    />
-                  </div>
-                  <div className="item-wrapper inner-1" data-tooltip="Random delay between 0 and the config">
-                    <span>Random</span>
-                    <input type="checkbox" checked={preferences.claim.delayRandom} disabled={preferences.claim.delay === 0} onChange={(e) => setPreferences(pref => { pref.claim.delayRandom = e.target.checked; return { ...pref } })} />
-                  </div>
-                </>
-              </Item>
               <Item category="kakera" label="Kakera">
                 <>
                   {(preferences.useUsers === "tokenlist" ? [...preferences.kakera.perToken.keys()] : ["all"]).map((token, i) =>
@@ -598,44 +625,6 @@ function App() {
                   </div>
                 </>
               </Item>
-              <>
-                <div className="item-wrapper inner-0">
-                  <span>Snipe targets</span>
-                  <div className="flex-inline-wrapper">
-                    {
-                      menuSubcategory === "snipe" &&
-                      <>
-                        <button className="button-red" data-tooltip="Clear" onClick={snipeListClear}>
-                          {SVGS.X}
-                        </button>
-                        <button className="button-green" data-tooltip="Add" onClick={snipeListAdd}>
-                          {SVGS.PLUS}
-                        </button>
-                      </>
-                    }
-                    <button {...(menuSubcategory === "snipe" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("snipe")}>
-                      {SVGS.ARROW}
-                    </button>
-                  </div>
-                </div>
-                {
-                  menuSubcategory === "snipe" &&
-                  <div className="item-wrapper inner-1">
-                    <div className="list">
-                      {snipeList.map((nick, i) =>
-                        <input
-                          type="text"
-                          spellCheck="false"
-                          value={nick}
-                          onChange={(e) => { snipeList[i] = e.target.value; setSnipeList([...snipeList]) }}
-                          onBlur={(e) => validateSnipeInput(i, e.target.value)}
-                          key={`snipenick-${i}`}
-                        />
-                      )}
-                    </div>
-                  </div>
-                }
-              </>
               <Item category="notifications" label="Notifications">
                 <>
                   <div className="item-wrapper inner-1">
@@ -647,7 +636,7 @@ function App() {
                     </select>
                   </div>
                   <div className="item-wrapper inner-1">
-                    <div id="soundlist" className="list">
+                    <div className="list">
                       {
                         Object.keys(NOTIFICATIONS).map((notification) =>
                           <div key={`soundchk-${notification}`}>
@@ -660,6 +649,174 @@ function App() {
                   </div>
                 </>
               </Item>
+            </Item>
+            <Item category="claim" label="Claim Config">
+              <div className="item-wrapper inner-1">
+                <div className="list">
+                  <div>
+                    <input type="checkbox" id="claim-chk-wishedbyme" checked={preferences.claim.wishedByMe} onChange={(e) => { setPreferences({ ...preferences, claim: { ...preferences.claim, wishedByMe: e.target.checked } }) }} />
+                    <label htmlFor="claim-chk-wishedbyme">Claim wished by me</label>
+                  </div>
+                  <div>
+                    <input type="checkbox" id="claim-chk-snipe" checked={preferences.claim.wishedByOthers} onChange={(e) => { setPreferences({ ...preferences, claim: { ...preferences.claim, wishedByOthers: e.target.checked } }) }} />
+                    <label htmlFor="claim-chk-snipe">Claim wished by specific users</label>
+                  </div>
+                  <div>
+                    <input type="checkbox" id="claim-chk-fromlist-char" checked={preferences.claim.fromListCharacters} onChange={(e) => { setPreferences({ ...preferences, claim: { ...preferences.claim, fromListCharacters: e.target.checked } }) }} />
+                    <label htmlFor="claim-chk-fromlist-char">Claim from character list</label>
+                  </div>
+                  <div>
+                    <input type="checkbox" id="claim-chk-fromlist-series" checked={preferences.claim.fromListSeries} onChange={(e) => { setPreferences({ ...preferences, claim: { ...preferences.claim, fromListSeries: e.target.checked } }) }} />
+                    <label htmlFor="claim-chk-fromlist-series">Claim from series list</label>
+                  </div>
+                </div>
+              </div>
+              <Item category="claim_delay" label="Claim delay">
+                <>
+                  <div className="item-wrapper inner-1">
+                    <span>Delay</span>
+                    <span>{preferences.claim.delay}s</span>
+                    <Range
+                      max={8.1}
+                      step={.1}
+                      value={preferences.claim.delay}
+                      onChange={(e) => {
+                        const delay = Number(e.target.value);
+                        preferences.claim.delay = delay;
+                        if (delay === 0) preferences.claim.delayRandom = false;
+                        setPreferences({ ...preferences });
+                      }}
+                    />
+                  </div>
+                  <div className="item-wrapper inner-1" data-tooltip="Random delay between 0 and the config">
+                    <span>Random</span>
+                    <input type="checkbox" checked={preferences.claim.delayRandom} disabled={preferences.claim.delay === 0} onChange={(e) => setPreferences(pref => { pref.claim.delayRandom = e.target.checked; return { ...pref } })} />
+                  </div>
+                </>
+              </Item>
+              {
+                preferences.claim.wishedByOthers &&
+                <>
+                  <div className="item-wrapper inner-0" data-tooltip={"List their nicknames"}>
+                    <span>Target users</span>
+                    <div className="flex-inline-wrapper">
+                      {
+                        menuSubcategory === "target_users" &&
+                        <>
+                          <button className="button-red" data-tooltip="Clear" onClick={() => listClear("target_users")}>
+                            {SVGS.X}
+                          </button>
+                          <button className="button-green" data-tooltip="Add" onClick={() => listAdd("target_users")}>
+                            {SVGS.PLUS}
+                          </button>
+                        </>
+                      }
+                      <button {...(menuSubcategory === "target_users" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("target_users")}>
+                        {SVGS.ARROW}
+                      </button>
+                    </div>
+                  </div>
+                  {
+                    menuSubcategory === "target_users" &&
+                    <div className="item-wrapper inner-1">
+                      <div className="list">
+                        {targetUsersList.map((nick, i) =>
+                          <input
+                            type="text"
+                            spellCheck="false"
+                            value={nick}
+                            onChange={(e) => { targetUsersList[i] = e.target.value; setTargetUsersList([...targetUsersList]) }}
+                            onBlur={(e) => validateListInput(i, e.target.value, "target_users")}
+                            key={`targetusernick-${i}`}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  }
+                </>
+              }
+              {
+                preferences.claim.fromListCharacters &&
+                <>
+                  <div className="item-wrapper inner-0">
+                    <span>Character list</span>
+                    <div className="flex-inline-wrapper">
+                      {
+                        menuSubcategory === "character_list" &&
+                        <>
+                          <button className="button-red" data-tooltip="Clear" onClick={() => listClear("character_list")}>
+                            {SVGS.X}
+                          </button>
+                          <button className="button-green" data-tooltip="Add" onClick={() => listAdd("character_list")}>
+                            {SVGS.PLUS}
+                          </button>
+                        </>
+                      }
+                      <button {...(menuSubcategory === "character_list" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("character_list")}>
+                        {SVGS.ARROW}
+                      </button>
+                    </div>
+                  </div>
+                  {
+                    menuSubcategory === "character_list" &&
+                    <div className="item-wrapper inner-1">
+                      <div className="list">
+                        {characterList.map((character, i) =>
+                          <input
+                            type="text"
+                            spellCheck="false"
+                            value={character}
+                            onChange={(e) => { characterList[i] = e.target.value; setCharacterList([...characterList]) }}
+                            onBlur={(e) => validateListInput(i, e.target.value, "character_list")}
+                            key={`characterlist-${i}`}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  }
+                </>
+              }
+              {
+                preferences.claim.fromListSeries &&
+                <>
+                  <div className="item-wrapper inner-0">
+                    <span>Series list</span>
+                    <div className="flex-inline-wrapper">
+                      {
+                        menuSubcategory === "series_list" &&
+                        <>
+                          <button className="button-red" data-tooltip="Clear" onClick={() => listClear("series_list")}>
+                            {SVGS.X}
+                          </button>
+                          <button className="button-green" data-tooltip="Add" onClick={() => listAdd("series_list")}>
+                            {SVGS.PLUS}
+                          </button>
+                        </>
+                      }
+                      <button {...(menuSubcategory === "series_list" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("series_list")}>
+                        {SVGS.ARROW}
+                      </button>
+                    </div>
+                  </div>
+                  {
+                    menuSubcategory === "series_list" &&
+                    <div className="item-wrapper inner-1">
+                      <div className="list">
+                        {seriesList.map((series, i) =>
+                          <input
+                            type="text"
+                            spellCheck="false"
+                            value={series}
+                            onChange={(e) => { seriesList[i] = e.target.value; setSeriesList([...seriesList]) }}
+                            onBlur={(e) => validateListInput(i, e.target.value, "series_list")}
+                            key={`serieslist-${i}`}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  }
+                </>
+              }
             </Item>
             <Item category="guild" label="Guild Config">
               <div className="item-wrapper inner-0">

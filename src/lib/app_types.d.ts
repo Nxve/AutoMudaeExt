@@ -1,3 +1,3 @@
-export type MenuCategory = "bot" | "guild" | "extra" | null;
-export type MenuSubcategory = "tokenlist" | "claim" | "kakera" | "notifications" | "snipe" | null;
+export type MenuCategory = "general" | "claim" | "guild" | "extra" | null;
+export type MenuSubcategory = "tokenlist" | "claim_delay" | "kakera" | "notifications" | "target_users" | "character_list" | "series_list" | null;
 export type InfoPanelType = "status" | "stats" | "events" | "warns" | "errors" | null;

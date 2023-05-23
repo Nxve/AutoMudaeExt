@@ -18,7 +18,6 @@ export interface Preferences {
     versionMinor: number
     useUsers: PrefUseUsers;
     tokenList: Set<string>;
-    snipeList: Set<string>;
     guild: {
         language: PrefLanguage;
         claimReset: number
@@ -34,6 +33,13 @@ export interface Preferences {
     claim: {
         delay: number
         delayRandom: boolean
+        wishedByMe: boolean
+        wishedByOthers: boolean
+        fromListCharacters: boolean
+        fromListSeries: boolean
+        targetUsersList: Set<string>
+        characterList: Set<string>
+        seriesList: Set<string>
     }
     kakera: {
         delay: number
@@ -63,7 +69,7 @@ export interface BotManager {
     hasNeededInfo(): boolean
     isLastReset(shift?: number, now?: Date): boolean
     mudaeTimeToMs(time: string): number | null
-    getMarriageableUser(priority?: {nicknames?: string[], userId?: string}): BotUser | null
+    getMarriageableUser(priority?: { nicknames?: string[], userId?: string }): BotUser | null
     setup(): Promise<void>
     toggle(): void
     think(): void
@@ -338,7 +344,7 @@ export class BotUser {
     }
 
     private async sendSlashCommand(command: SlashCommand): Promise<void> {
-        const slashCommandInfo = SLASH_COMMANDS[command];     
+        const slashCommandInfo = SLASH_COMMANDS[command];
         const guildId = this.manager.info.get(DISCORD_INFO.GUILD_ID);
         const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
 
@@ -372,22 +378,22 @@ export class BotUser {
             if (!this.manager.preferences) {
                 throw Error("Unknown preferences.")
             }
-    
+
             await this.sendSlashCommand(this.manager.preferences.roll.type);
         },
         message: async (message: string) => {
             const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
-    
+
             if (!channelId) throw Error("Unknown channel ID");
-    
+
             const now = performance.now();
-    
+
             if (now - this.manager.cdSendMessage < INTERVAL_SEND_MESSAGE) {
                 return; /// Silent failure. Throwing it would log as an error.
             }
-    
+
             this.manager.cdSendMessage = now;
-    
+
             try {
                 await fetch(`https://discord.com/api/v9/channels/${channelId}/messages`, {
                     "method": "POST",
@@ -410,7 +416,6 @@ export const defaultPreferences = (): Preferences => ({
     versionMinor: VERSION_MINOR,
     useUsers: "logged",
     tokenList: new Set(),
-    snipeList: new Set(),
     guild: {
         language: "en",
         claimReset: MUDAE_CLAIM_RESET_DEFAULT
@@ -425,7 +430,14 @@ export const defaultPreferences = (): Preferences => ({
     },
     claim: {
         delay: 0,
-        delayRandom: false
+        delayRandom: false,
+        wishedByMe: true,
+        wishedByOthers: false,
+        fromListCharacters: false,
+        fromListSeries: false,
+        targetUsersList: new Set(),
+        characterList: new Set(),
+        seriesList: new Set()
     },
     kakera: {
         delay: .1,
