@@ -20,6 +20,7 @@ You can expect it to be available for use after the completion of the below road
         - /tu exposing every needed info
 
 #### Secondary plans:
+- Import char/series list
 - Account management:
     - $givek: Transfer kakera between users
     - $wp: Remove claimed wishes
