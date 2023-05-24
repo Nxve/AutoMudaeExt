@@ -6,7 +6,6 @@ It is still in early development, thus unavailable in webstore.
 You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
 #### Roadmap to get it working:
-- Handle rolls with no buttons (Custom `$togglereact` config or unwished characters)
 - Notifications
     - Some of the events should trigger sound notifications
 - Guild Config:
@@ -21,6 +20,7 @@ You can expect it to be available for use after the completion of the below road
 
 #### Secondary plans:
 - Import char/series list
+- Auto scroll to bottom of lists (Tokens, Characters, Series and Target users)
 - Account management:
     - $givek: Transfer kakera between users
     - $wp: Remove claimed wishes
