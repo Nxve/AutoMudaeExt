@@ -150,7 +150,7 @@ const bot: BotManager = {
 
             const message = await this.get($message);
 
-            if (message){
+            if (message) {
                 this._MessageAuthorCache.set($message, message.author.id);
 
                 return message.author.id;
@@ -446,8 +446,8 @@ const bot: BotManager = {
     handleNewChatAppend(nodes) {
         document.querySelector("div[class^='scrollerSpacer']")?.scrollIntoView();
 
-        nodes.forEach(async _node => { 
-            if (!bot.preferences) return;            
+        nodes.forEach(async _node => {
+            if (!bot.preferences) return;
 
             const $msg = _node as HTMLElement;
 
@@ -593,26 +593,48 @@ const bot: BotManager = {
 
                 /// Check if should try to claim
                 if (!isOwned) {
+                    const claimWishedByMe = bot.preferences.claim.wishedByMe;
+                    const claimWishedByOthers = bot.preferences.claim.wishedByOthers && bot.preferences.claim.targetUsersList.size > 0;
+                    const claimFromListCharacters = bot.preferences.claim.fromListCharacters && bot.preferences.claim.characterList.size > 0;
+                    const claimFromListSeries = bot.preferences.claim.fromListSeries && bot.preferences.claim.seriesList.size > 0;
+
+                    /// Don't want to claim
+                    if (!claimWishedByMe && !claimWishedByOthers && !claimFromListCharacters && !claimFromListSeries) return;
+
                     let isThisInteresting = false;
 
                     const mentionedNicknames: string[] = [...$msg.querySelectorAll("span.mention")].map($mention => ($mention as HTMLElement).innerText.slice(1));
 
-                    for (const mentionedNick of mentionedNicknames) {
-                        if (bot.preferences.claim.targetUsersList.has(mentionedNick) || bot.getUserWithCriteria(user => user.nick === mentionedNick)) {
-                            isThisInteresting = true;
-                            break;
+                    if (claimWishedByMe || claimWishedByOthers) {
+                        for (const mentionedNick of mentionedNicknames) {
+                            //# Check whether this mentioned botUser can claim. If so, skip the marriageable user part
+                            if ((claimWishedByMe && bot.getUserWithCriteria(user => user.nick === mentionedNick)) || (claimWishedByOthers && bot.preferences.claim.targetUsersList.has(mentionedNick))) {
+                                isThisInteresting = true;
+                                break;
+                            }
                         }
                     }
 
                     const isProtected = !!$msg.querySelector("img[alt=':wishprotect:']");
                     const marriageableUser = bot.getMarriageableUser({ nicknames: mentionedNicknames, ...((isProtected && interactionInfo) && { userId: interactionInfo.userId }) });
 
-                    //# Search in a user configured list of interesting characters
-                    // if (marriageableUser && !isThisInteresting && bot.isLastReset()) {
-                    //     if (characterName === "hmm") {
-                    //         isThisInteresting = true;
-                    //     };
-                    // }
+                    if (marriageableUser && !isThisInteresting && (claimFromListCharacters || claimFromListSeries) && (!bot.preferences.claim.onlyLastReset || bot.isLastReset())) {
+                        //# Remove this character from charList/seriesList when claimed (When claimed, not here)
+
+                        if (claimFromListCharacters && bot.preferences.claim.characterList.has(characterName)) {
+                            isThisInteresting = true;
+                        }
+
+                        if (!isThisInteresting && claimFromListCharacters) {
+                            const seriesName = ($msg.querySelector("div[class^='embedDescription']") as HTMLElement | null)?.innerText.split("\n")[0];
+
+                            if (!seriesName) {
+                                bot.log.error("Couldn't get series name from message <NotImplementedReference>", false); //# Add reference to message
+                            } else if (bot.preferences.claim.seriesList.has(seriesName)) {
+                                isThisInteresting = true;
+                            }
+                        }
+                    }
 
                     if (isThisInteresting) {
                         bot.log.event(EVENTS.FOUND_CHARACTER, { character: characterName });

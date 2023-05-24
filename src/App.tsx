@@ -669,6 +669,10 @@ function App() {
                     <input type="checkbox" id="claim-chk-fromlist-series" checked={preferences.claim.fromListSeries} onChange={(e) => { setPreferences({ ...preferences, claim: { ...preferences.claim, fromListSeries: e.target.checked } }) }} />
                     <label htmlFor="claim-chk-fromlist-series">Claim from series list</label>
                   </div>
+                  <div>
+                    <input type="checkbox" id="claim-chk-lastreset" checked={preferences.claim.onlyLastReset} onChange={(e) => { setPreferences({ ...preferences, claim: { ...preferences.claim, onlyLastReset: e.target.checked } }) }} />
+                    <label htmlFor="claim-chk-lastreset">Use lists only during last reset</label>
+                  </div>
                 </div>
               </div>
               <Item category="claim_delay" label="Claim delay">

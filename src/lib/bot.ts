@@ -37,6 +37,7 @@ export interface Preferences {
         wishedByOthers: boolean
         fromListCharacters: boolean
         fromListSeries: boolean
+        onlyLastReset: boolean
         targetUsersList: Set<string>
         characterList: Set<string>
         seriesList: Set<string>
@@ -435,6 +436,7 @@ export const defaultPreferences = (): Preferences => ({
         wishedByOthers: false,
         fromListCharacters: false,
         fromListSeries: false,
+        onlyLastReset: false,
         targetUsersList: new Set(),
         characterList: new Set(),
         seriesList: new Set()
