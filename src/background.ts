@@ -2,6 +2,7 @@ import type { EventLog, ErrorLog, WarnLog, Logs, LogType, Unseen } from "./lib/b
 import type { BotEvent } from "./lib/bot/event";
 import type { Stats } from "./lib/bot/status_stats";
 import type { Message } from "./lib/messaging";
+import type { Preferences } from "./lib/bot";
 import { LOG_BADGE_COLORS, LOG_TYPES } from "./lib/bot/log";
 import { blankLogs, blankUnseen } from "./lib/bot/log";
 import { blankStats } from "./lib/bot/status_stats";
@@ -42,12 +43,26 @@ const getUnseen = async (): Promise<Unseen> => {
     return data.unseen || blankUnseen();
 };
 
+const getPreferences = async (): Promise<Preferences | null> => {
+    const data = await chrome.storage.local.get("preferences");
+
+    return data.preferences || null;
+};
+
 const updateStats = async (cb: (stats: Stats) => Stats) => {
     chrome.storage.session.set({ stats: cb(await getStats()) });
 };
 
 const updateLogs = async (cb: (logs: Logs) => Logs) => {
     chrome.storage.session.set({ logs: cb(await getLogs()) });
+};
+
+const updatePreferences = async (cb: (preferences: Preferences) => Preferences) => {
+    const preferences = await getPreferences();
+
+    if (preferences){
+        chrome.storage.local.set({preferences: cb(preferences)});
+    }
 };
 
 const increaseUnseen = async (logType: LogType) => {
@@ -115,6 +130,12 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
                         if (claimKakera > 0) {
                             stats.kakera[claimUsername] = Object.hasOwn(stats.kakera, claimUsername) ? stats.kakera[claimUsername] + claimKakera : claimKakera;
                         }
+
+                        updatePreferences(preferences => {
+                            preferences.claim.characterList.delete(claimCharacter);
+
+                            return preferences;
+                        });
                         break;
                     case EVENTS.STEAL:
                         const { character: stealCharacter, user: stealUser } = message.data.content;

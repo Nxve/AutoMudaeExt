@@ -1,9 +1,10 @@
 import type { BotEvent } from "./bot/event";
-import { INTERVAL_SEND_MESSAGE, MUDAE_CLAIM_RESET_DEFAULT, MUDAE_USER_ID, VERSION_MAJOR, VERSION_MINOR } from "./consts";
+import type { DiscordMessage } from "./discord";
+import { EMOJIS, INTERVAL_SEND_MESSAGE, MUDAE_CLAIM_RESET_DEFAULT, MUDAE_USER_ID, VERSION_MAJOR, VERSION_MINOR } from "./consts";
 import { SVGS } from "./svgs";
 import { KAKERAS, SLASH_COMMANDS, SlashCommand } from "./mudae";
 import { minifyToken, sleep } from "./utils";
-import type { DiscordMessage } from "./discord";
+import _ from "lodash";
 
 export const ROLL_TYPES = ["wx", "wa", "wg", "hx", "ha", "hg"] as const;
 
@@ -305,8 +306,8 @@ export class BotUser {
 
     async pressMessageButton($message: HTMLElement): Promise<void> {
         const messageId = this.manager.message.getId($message);
-        const guildId = this.manager.info.get(DISCORD_INFO.GUILD_ID) as string;
-        const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID) as string;
+        const guildId = this.manager.info.get(DISCORD_INFO.GUILD_ID);
+        const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
 
         if (!messageId) throw Error("Unknown message ID.");
         if (!guildId) throw Error("Unknown guild ID.");
@@ -340,7 +341,29 @@ export class BotUser {
             });
         } catch (error) {
             console.error("Error while interacting with Discord message button", $message, error);
-            throw Error("Couldn't interact with the button. Check console for more info.");
+            throw Error("Check console for more info.");
+        }
+    }
+
+    async reactToMessage($message: HTMLElement): Promise<void> {
+        const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
+        const messageId = this.manager.message.getId($message);
+
+        if (!messageId) throw Error("Unknown message ID.");
+        if (!channelId) throw Error("Unknown channel ID.");
+
+        const emoji = _.sample(EMOJIS);
+
+        try {
+            fetch(`https://discord.com/api/v9/channels/${channelId}/messages/${messageId}/reactions/${emoji}/%40me`, {
+                "method": "PUT",
+                "headers": {
+                    "authorization": this.token,
+                }
+            });
+        } catch (error) {
+            console.error("Error while reacting to a Discord message", $message, error);
+            throw Error("Check console for more info.");
         }
     }
 

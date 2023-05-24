@@ -656,7 +656,10 @@ const bot: BotManager = {
 
                             const thisClaim = () => {
                                 marriageableUser.pressMessageButton($msg)
-                                    .catch(err => bot.log.error(`User ${marriageableUser.username} couldn't react to a message: ${err.message}`, false));
+                                    .catch(buttonError => {
+                                        marriageableUser.reactToMessage($msg)
+                                        .catch(reactError => bot.log.error(`User ${marriageableUser.username} couldn't claim a character: ${reactError.message}`, false));
+                                    });
                             };
 
                             if (!claimDelay) return thisClaim();
@@ -706,7 +709,7 @@ const bot: BotManager = {
 
                                 const thisClaim = () => {
                                     botUser.pressMessageButton($msg)
-                                        .catch(err => bot.log.error(`User ${botUser.username} couldn't react to a kakera: ${err.message}`, false));
+                                    .catch(err => bot.log.error(`User ${botUser.username} couldn't claim kakera: ${err.message}`, false));
                                 };
 
                                 if (claimDelay > 0) {

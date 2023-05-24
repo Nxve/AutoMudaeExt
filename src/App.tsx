@@ -18,6 +18,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import "./styles/App.css";
 import { DISCORD_EMBED_FIELD_MAX, DISCORD_EMBED_FIELD_MIN, DISCORD_NICK_MAX, DISCORD_NICK_MIN, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN, VERSION_MAJOR, VERSION_MINOR } from "./lib/consts";
 import { ItemsWrapper, Item } from "./components/Items";
+import { EVENTS } from "./lib/bot/event";
 
 function App() {
   /// App state
@@ -375,6 +376,19 @@ function App() {
       case MESSAGES.BOT.WARN:
       case MESSAGES.BOT.EVENT:
         sendWorkerMessage(MESSAGES.APP.GET_EVERYTHING, null, handleWorkerData);
+
+        if (message.id === MESSAGES.BOT.EVENT){
+          if (message.data.eventType === EVENTS.CLAIM){
+            const claimCharacter: string = message.data.content.character;
+
+            const characterIndex = characterList.indexOf(claimCharacter);
+
+            if (~characterIndex){
+              characterList.splice(characterIndex, 1);
+              setCharacterList([...characterList]);
+            }
+          }
+        }
         break;
       default:
         break;

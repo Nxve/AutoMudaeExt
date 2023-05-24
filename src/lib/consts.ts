@@ -18,3 +18,16 @@ export const MUDAE_SILVERIV_KAKERA_BONUS = 200;
 export const MUDAE_CLAIM_RESET_MIN = 60;
 export const MUDAE_CLAIM_RESET_MAX = 600;
 export const MUDAE_CLAIM_RESET_DEFAULT = 180;
+
+/// Emojis
+export const EMOJIS = {
+    '💓': '%F0%9F%92%93',
+    '💕': '%F0%9F%92%95',
+    '💖': '%F0%9F%92%96',
+    '💗': '%F0%9F%92%97',
+    '💘': '%F0%9F%92%98',
+    '❤️': '%E2%9D%A4%EF%B8%8F',
+    '❣️': '%E2%9D%A3%EF%B8%8F',
+    '💞': '%F0%9F%92%9E',
+    '♥️': '%E2%99%A5%EF%B8%8F'
+} as const;
