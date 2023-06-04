@@ -199,7 +199,6 @@ export class BotUser {
     username?: string
     avatar?: string
     nick?: string
-    sendTUTimer?: any /// number, but typescript is complaining
 
     constructor(botManager: BotManager, token: string, id?: string, username?: string, avatar?: string) {
         this.manager = botManager;
@@ -293,15 +292,6 @@ export class BotUser {
         });
 
         return missingUserInfo;
-    }
-
-    //# Instead of setting a timer to send /tu, delete some needed info for this user, just as in hourly resets
-    setTUTimer(ms: number) {
-        if (this.sendTUTimer) clearTimeout(this.sendTUTimer);
-
-        this.sendTUTimer = setTimeout((user: BotUser) => {
-            user.send.tu();
-        }, ms, this);
     }
 
     async pressMessageButton($message: HTMLElement): Promise<void> {
