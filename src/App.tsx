@@ -452,10 +452,15 @@ function App() {
         const tab = tabs[0];
 
         if (!tab || tab.id == null) return;
+        
+        sendTabMessage(tab.id, MESSAGES.APP.GET_STATUS, null, (response?: { botState: BotState, lastError?: string, stringifiedUserStatus?: string }) => {
+          if (!response){
+            console.error("Couldn't communicate with the active Discord tab. Reload the tab and try again.");
+            return;
+          }
 
-        setDiscordTab(tab);
+          setDiscordTab(tab);
 
-        sendTabMessage(tab.id, MESSAGES.APP.GET_STATUS, null, (response: { botState: BotState, lastError?: string, stringifiedUserStatus?: string }) => {
           if (!Object.hasOwn(BOT_STATES, response.botState)) return;
 
           if (response.stringifiedUserStatus) {
