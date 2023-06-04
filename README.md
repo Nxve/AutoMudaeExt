@@ -10,7 +10,6 @@ You can expect it to be available for use after the completion of the below road
     - Some of the events should trigger sound notifications
 - Guild Config:
     - Option to get from `/server settings`
-- Version control over preferences
 - Advise about it's requirements:
     - Maybe after installation, in a "guide" page
     - Requirements:
