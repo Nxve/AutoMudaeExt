@@ -5,7 +5,7 @@ import type { UserStatus } from "./lib/bot/status_stats";
 import type { DiscordMessage } from "./lib/discord";
 import { DISCORD_INFO } from "./lib/bot";
 import { BotUser, USER_INFO, ROLL_TYPES } from "./lib/bot";
-import { INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID, INTERVAL_DONT_ROLL_AFTER_ACTIVITY } from "./lib/consts";
+import { INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID, INTERVAL_DONT_ROLL_AFTER_ACTIVITY, INTERVAL_GATHER_INFO } from "./lib/consts";
 import { MESSAGES, ChromeMessageQueue } from "./lib/messaging";
 import { KAKERAS } from "./lib/mudae";
 import { getPeriodHash, jsonMapSetReplacer, jsonMapSetReviver, minifyToken, randomFloat, randomSessionID } from "./lib/utils";
@@ -133,7 +133,7 @@ const bot: BotManager = {
             }
 
             if ($avatar) {
-                const match = /avatars\/(\d+)\//.exec($avatar.src);
+                const match = /users\/(\d+)\/avatars/.exec($avatar.src) || /avatars\/(\d+)\//.exec($avatar.src);
 
                 if (match) {
                     const authorId = match[1];
@@ -365,10 +365,7 @@ const bot: BotManager = {
 
         this.chatObserver.disconnect();
         this.timers.clear();
-        this.users.forEach(user => {
-            if (user.sendTUTimer) clearTimeout(user.sendTUTimer);
-            user.info.clear();
-        });
+        this.users.forEach(user => user.info.clear());
         this.state = "idle";
     },
 
@@ -395,7 +392,7 @@ const bot: BotManager = {
 
         /// Send /tu to gather info if needed
         if (!bot.hasNeededInfo()) {
-            if (now - bot.cdGatherInfo < 1000) return;
+            if (now - bot.cdGatherInfo < INTERVAL_GATHER_INFO) return;
 
             for (const botUser of bot.users) {
                 if (botUser.missingInfo().length > 0) {
@@ -445,6 +442,11 @@ const bot: BotManager = {
 
     handleNewChatAppend(nodes) {
         document.querySelector("div[class^='scrollerSpacer']")?.scrollIntoView();
+        
+        if (!bot.preferences) {
+            bot.error("Couldn't read bot preferences");
+            return;
+        };
 
         nodes.forEach(async _node => {
             if (!bot.preferences) return;
@@ -507,11 +509,10 @@ const bot: BotManager = {
 
                             botUser.info.set(USER_INFO.CAN_RT, !cooldownRTMatch);
 
-                            if (cooldownRTMatch) {
-                                const ms = bot.mudaeTimeToMs(cooldownRTMatch[1]);
-
-                                if (ms) botUser.setTUTimer(ms + 500);
-                            }
+                            //# recheck for RT after ms
+                            // if (cooldownRTMatch) {
+                            // const ms = bot.mudaeTimeToMs(cooldownRTMatch[1]);
+                            // }
                         } else {
                             botUser.info.set(USER_INFO.CAN_RT, false);
                         }
@@ -658,7 +659,7 @@ const bot: BotManager = {
                                 marriageableUser.pressMessageButton($msg)
                                     .catch(buttonError => {
                                         marriageableUser.reactToMessage($msg)
-                                        .catch(reactError => bot.log.error(`User ${marriageableUser.username} couldn't claim a character: ${reactError.message}`, false));
+                                            .catch(reactError => bot.log.error(`User ${marriageableUser.username} couldn't claim a character: ${reactError.message}`, false));
                                     });
                             };
 
@@ -709,7 +710,7 @@ const bot: BotManager = {
 
                                 const thisClaim = () => {
                                     botUser.pressMessageButton($msg)
-                                    .catch(err => bot.log.error(`User ${botUser.username} couldn't claim kakera: ${err.message}`, false));
+                                        .catch(err => bot.log.error(`User ${botUser.username} couldn't claim kakera: ${err.message}`, false));
                                 };
 
                                 if (claimDelay > 0) {
