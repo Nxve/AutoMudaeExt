@@ -1,7 +1,7 @@
 {
   "name": "Auto Mudae",
   "description": "Automates the use of Mudae bot in Discord",
-  "version": "1.0",
+  "version": "1.1",
   "manifest_version": 3,
   "action": {
     "default_popup": "index.html",
