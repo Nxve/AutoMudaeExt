@@ -171,13 +171,13 @@ const bot: BotManager = {
                 return null;
             }
 
-            const match = /avatars\/(\d+)\//.exec($avatar.src);
+            const avatarUserIdMatch = /users\/(\d+)\/avatars/.exec($avatar.src) || /avatars\/(\d+)\//.exec($avatar.src);
 
-            if (!match || !$commandName.innerText) {
+            if (!avatarUserIdMatch || !$commandName.innerText) {
                 return null;
             };
 
-            return { userId: match[1], command: $commandName.innerText.slice(1) };
+            return { userId: avatarUserIdMatch[1], command: $commandName.innerText.slice(1) };
         },
     },
 
