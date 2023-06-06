@@ -16,7 +16,7 @@ import NavBar from "./components/NavBar";
 import Range from "./components/Range";
 import React, { useCallback, useEffect, useState } from "react";
 import "./styles/App.css";
-import { DISCORD_EMBED_FIELD_MAX, DISCORD_EMBED_FIELD_MIN, DISCORD_NICK_MAX, DISCORD_NICK_MIN, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN, VERSION_MAJOR, VERSION_MINOR } from "./lib/consts";
+import { DISCORD_EMBED_FIELD_MAX, DISCORD_EMBED_FIELD_MIN, DISCORD_NICK_MAX, DISCORD_NICK_MIN, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN, VERSION_PREFERENCES } from "./lib/consts";
 import { ItemsWrapper, Item } from "./components/Items";
 import { EVENTS } from "./lib/bot/event";
 
@@ -415,12 +415,11 @@ function App() {
       .then(result => {
         if (Object.hasOwn(result, "preferences")) {
           const loadedPreferences: Preferences = JSON.parse(result.preferences, jsonMapSetReviver);
-          const verMajor: number | undefined = loadedPreferences.versionMajor;
-          const verMinor: number | undefined = loadedPreferences.versionMinor;
+          const prefVersion: number | undefined = loadedPreferences.preferencesVersion;
 
-          const isPrefVersionUpToDate = verMajor != null && verMajor === VERSION_MAJOR;
+          const isPrefVersionCompatible = prefVersion != null && prefVersion === VERSION_PREFERENCES;
 
-          if (isPrefVersionUpToDate) {
+          if (isPrefVersionCompatible) {
             setPreferences(loadedPreferences);
             setTokenList([...loadedPreferences.tokenList]);
             setTargetUsersList([...loadedPreferences.claim.targetUsersList]);
@@ -429,7 +428,7 @@ function App() {
 
             console.log("Loaded preferences.", loadedPreferences);
           } else {
-            console.log(`Preferences were outdated. Preferences version: v${verMajor}.${verMinor || "?"}. Current version: v${VERSION_MAJOR}.${VERSION_MINOR}`);
+            console.log(`Preferences were incompatible. Preferences version: ${prefVersion ? "v" + prefVersion : "unknown"}. Current version: v${VERSION_PREFERENCES}`);
 
             chrome?.storage?.local.remove("preferences");
           }

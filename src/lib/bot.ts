@@ -1,6 +1,6 @@
 import type { BotEvent } from "./bot/event";
 import type { DiscordMessage } from "./discord";
-import { EMOJIS, INTERVAL_SEND_MESSAGE, MUDAE_CLAIM_RESET_DEFAULT, MUDAE_USER_ID, VERSION_MAJOR, VERSION_MINOR } from "./consts";
+import { EMOJIS, INTERVAL_SEND_MESSAGE, MUDAE_CLAIM_RESET_DEFAULT, MUDAE_USER_ID, VERSION_PREFERENCES } from "./consts";
 import { SVGS } from "./svgs";
 import { KAKERAS, SLASH_COMMANDS, SlashCommand } from "./mudae";
 import { minifyToken, sleep } from "./utils";
@@ -16,8 +16,7 @@ export type PrefLanguage = "en" | "fr" | "es" | "pt_br";
 export type PrefDailyKakera = "off" | "available" | "reset_power";
 
 export interface Preferences {
-    versionMajor: number
-    versionMinor: number
+    preferencesVersion: number
     useUsers: PrefUseUsers;
     tokenList: Set<string>;
     dk: PrefDailyKakera
@@ -433,8 +432,7 @@ export class BotUser {
 };
 
 export const defaultPreferences = (): Preferences => ({
-    versionMajor: VERSION_MAJOR,
-    versionMinor: VERSION_MINOR,
+    preferencesVersion: VERSION_PREFERENCES,
     useUsers: "logged",
     tokenList: new Set(),
     dk: "off",

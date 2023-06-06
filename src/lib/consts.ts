@@ -1,6 +1,5 @@
 /// Bot
-export const VERSION_MAJOR = 1;
-export const VERSION_MINOR = 1;
+export const VERSION_PREFERENCES = 1;
 export const INTERVAL_GATHER_INFO = 1000;
 export const INTERVAL_SEND_MESSAGE = 1500;
 export const INTERVAL_THINK = 200;
