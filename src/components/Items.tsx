@@ -36,15 +36,21 @@ interface IItemProps {
     toggleMenuCategory?: (category?: MenuCategory) => void
     toggleMenuSubcategory?: (subCategory?: MenuSubcategory) => void
     isSubCategory?: boolean
+    className?: string
 }
 
 export function Item(props: React.PropsWithChildren<IItemProps>) {
     const isSubCategory = props.isSubCategory;
     const isSelected = props.category === (isSubCategory ? props.currentMenuSubcategory : props.currentMenuCategory);
 
+    const classes = ["item-wrapper"];
+
+    if (isSubCategory) classes.push("inner-0");
+    if (props.className) classes.push(props.className);
+
     return (
         <>
-            <div className={`item-wrapper${isSubCategory ? " inner-0" : ""}`}>
+            <div className={classes.join(" ")}>
                 {
                     isSubCategory ?
                         <>
