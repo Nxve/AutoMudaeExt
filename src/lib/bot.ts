@@ -13,12 +13,15 @@ export type PrefRollType = typeof ROLL_TYPES[number];
 export type PrefNotificationType = "sound" | "popup" | "both";
 export type PrefNotification = keyof typeof NOTIFICATIONS;
 export type PrefLanguage = "en" | "fr" | "es" | "pt_br";
+export type PrefDailyKakera = "off" | "available" | "reset_power";
 
 export interface Preferences {
     versionMajor: number
     versionMinor: number
     useUsers: PrefUseUsers;
     tokenList: Set<string>;
+    dk: PrefDailyKakera
+    getDaily: boolean
     guild: {
         language: PrefLanguage;
         claimReset: number
@@ -47,6 +50,10 @@ export interface Preferences {
         delay: number
         delayRandom: boolean
         perToken: Map<string, Set<keyof typeof KAKERAS>>
+    }
+    kl: {
+        enabled: boolean
+        amount: number
     }
 };
 
@@ -430,6 +437,8 @@ export const defaultPreferences = (): Preferences => ({
     versionMinor: VERSION_MINOR,
     useUsers: "logged",
     tokenList: new Set(),
+    dk: "off",
+    getDaily: false,
     guild: {
         language: "en",
         claimReset: MUDAE_CLAIM_RESET_DEFAULT
@@ -458,5 +467,9 @@ export const defaultPreferences = (): Preferences => ({
         delay: .1,
         delayRandom: false,
         perToken: new Map([["all", new Set()]])
+    },
+    kl: {
+        enabled: false,
+        amount: 1
     }
 });

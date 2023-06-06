@@ -67,6 +67,10 @@ main {
   padding-left: var(--items-padding-inline);
 }
 
+.item-wrapper> input[type=checkbox]:last-child{
+  margin-right: var(--items-padding-inline);
+}
+
 .item-wrapper>button {
   padding: 4px var(--items-padding-inline);
 }
@@ -310,4 +314,11 @@ header span {
   width: 1rem;
   height: 1rem;
   vertical-align: bottom;
+}
+
+/* Not implemented features highlight */
+
+.not-implemented {
+  outline: 1px yellow dotted;
+  outline-offset: -2px;
 }

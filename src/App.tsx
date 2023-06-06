@@ -1,4 +1,4 @@
-import type { BotState, Preferences, PrefLanguage, PrefNotification, PrefNotificationType, PrefRollType, PrefUseUsers } from "./lib/bot";
+import type { BotState, PrefDailyKakera, Preferences, PrefLanguage, PrefNotification, PrefNotificationType, PrefRollType, PrefUseUsers } from "./lib/bot";
 import type { KAKERA } from "./lib/mudae";
 import type { MessageID, Message } from "./lib/messaging";
 import type { Logs, Unseen, LogType } from "./lib/bot/log";
@@ -47,7 +47,7 @@ function App() {
 
   /// GUI
 
-  const isWide = menuCategory === "guild" || (menuCategory === "general" && (menuSubcategory === "tokenlist" || menuSubcategory === "kakera"));
+  const isWide = menuCategory === "guild" || menuCategory === "extra" || (menuCategory === "general" && (menuSubcategory === "tokenlist" || menuSubcategory === "kakera"));
 
   const listAdd = (listId: string) => {
     switch (listId) {
@@ -377,13 +377,13 @@ function App() {
       case MESSAGES.BOT.EVENT:
         sendWorkerMessage(MESSAGES.APP.GET_EVERYTHING, null, handleWorkerData);
 
-        if (message.id === MESSAGES.BOT.EVENT){
-          if (message.data.eventType === EVENTS.CLAIM){
+        if (message.id === MESSAGES.BOT.EVENT) {
+          if (message.data.eventType === EVENTS.CLAIM) {
             const claimCharacter: string = message.data.content.character;
 
             const characterIndex = characterList.indexOf(claimCharacter);
 
-            if (~characterIndex){
+            if (~characterIndex) {
               characterList.splice(characterIndex, 1);
               setCharacterList([...characterList]);
             }
@@ -452,9 +452,9 @@ function App() {
         const tab = tabs[0];
 
         if (!tab || tab.id == null) return;
-        
+
         sendTabMessage(tab.id, MESSAGES.APP.GET_STATUS, null, (response?: { botState: BotState, lastError?: string, stringifiedUserStatus?: string }) => {
-          if (!response){
+          if (!response) {
             console.error("Couldn't communicate with the active Discord tab. Reload the tab and try again.");
             return;
           }
@@ -644,7 +644,7 @@ function App() {
                   </div>
                 </>
               </Item>
-              <Item category="notifications" label="Notifications">
+              <Item category="notifications" label="Notifications" className="not-implemented">
                 <>
                   <div className="item-wrapper inner-1">
                     <span>Notification type</span>
@@ -851,7 +851,7 @@ function App() {
                   <option value="pt_br">Português</option>
                 </select>
               </div>
-              <div className="item-wrapper inner-0">
+              <div className="item-wrapper inner-0 not-implemented">
                 <span>Claim reset</span>
                 <span>{preferences.guild.claimReset}min</span>
                 <Range
@@ -865,6 +865,34 @@ function App() {
               </div>
             </Item>
             <Item category="extra" label="Extra">
+              <div className="item-wrapper inner-0 not-implemented">
+                <span>$daily</span>
+                <input type="checkbox" checked={preferences.getDaily} onChange={(e) => setPreferences({ ...preferences, getDaily: e.target.checked })} />
+              </div>
+              <div className="item-wrapper inner-0 not-implemented">
+                <span>$dk</span>
+                <select value={preferences.dk} onChange={(e) => setPreferences({ ...preferences, dk: e.target.value as PrefDailyKakera })}>
+                  <option value="off">Off</option>
+                  <option value="available">When available</option>
+                  <option value="reset_power">To reset power</option>
+                </select>
+              </div>
+              <div className="item-wrapper inner-0 not-implemented" data-tooltip="Spam kakeraloots. Won't roll at the same time">
+                <span>$kl</span>
+                <span>{preferences.kl.amount}x</span>
+                <Range
+                  min={1}
+                  value={preferences.kl.amount}
+                  onChange={(e) => {
+                    const amount = Number(e.target.value);
+                    preferences.kl.amount = amount;
+                    setPreferences({ ...preferences });
+                  }}
+                />
+                <input type="checkbox" checked={preferences.kl.enabled} onChange={(e) => setPreferences(pref => { pref.kl.enabled = e.target.checked; return { ...pref } })} />
+              </div>
+            </Item>
+            <Item category="cleanup" label="Clean Up">
               <div className="item-wrapper inner-0">
                 <button onClick={reset}>Reset all config</button>
               </div>
