@@ -284,7 +284,7 @@ function App() {
   })();
 
   const sendTabMessage = (tab: chrome.tabs.Tab | number, messageId: MessageID, data: any, cb: (response?: any) => void) => {
-    const tabId = (typeof tab !== "number") ? tab.id : tab;
+    const tabId: number | chrome.tabs.Tab | undefined = (typeof tab !== "number") ? tab.id : tab;
 
     if (!tabId) return;
 
@@ -864,7 +864,7 @@ function App() {
               </div>
             </Item>
             <Item category="extra" label="Extra">
-              <div className="item-wrapper inner-0 not-implemented">
+              <div className="item-wrapper inner-0">
                 <span>$daily</span>
                 <input type="checkbox" checked={preferences.getDaily} onChange={(e) => setPreferences({ ...preferences, getDaily: e.target.checked })} />
               </div>

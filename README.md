@@ -19,6 +19,7 @@ You can expect it to be available for use after the completion of the below road
 
 #### Secondary plans:
 - Import char/series list
+- Add kakera from $dk to stats
 - Auto scroll to bottom of lists (Tokens, Characters, Series and Target users)
 - Account management:
     - $givek: Transfer kakera between users
@@ -30,8 +31,6 @@ You can expect it to be available for use after the completion of the below road
     - Change dropdowns to Discord's style
     - Add a fade out/in to scrollbar thumb when not active
     - Highlight Discord messages when claiming characters/kakeras, when stolen, etc
-- /daily
-    - Whenever it's up, i guess
 - /dk
     - States: Off | When available | To reset power (When there's still plenty of time until next reset)
 - /us

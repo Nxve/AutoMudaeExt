@@ -369,7 +369,7 @@ const bot: BotManager = {
         this.state = "idle";
     },
 
-    think() {
+    async think() {
         //# Throw
         if (!bot.preferences) return;
 
@@ -396,14 +396,31 @@ const bot: BotManager = {
 
             for (const botUser of bot.users) {
                 if (botUser.missingInfo().length > 0) {
-                    botUser.send.tu()
-                        .catch(err => bot.log.error(`User ${botUser.username} couldn't send TU: ${err.message}`, false));
+                    try {
+                        await botUser.send.tu();
+                    } catch (err) {
+                        bot.log.error(`User ${botUser.username} couldn't send TU: ${(err as Error)?.message}`, false);
+                    }
                     break;
                 }
             }
 
             bot.cdGatherInfo = now;
             return;
+        }
+
+        if (bot.preferences.getDaily) {
+            const userWithDaily = bot.getUserWithCriteria(user => user.info.get(USER_INFO.CAN_DAILY) as boolean);
+
+            if (userWithDaily) {
+                try {
+                    await userWithDaily.send.daily();
+                } catch (err) {
+                    bot.log.error(`User ${userWithDaily.username || "?"} couldn't send daily: ${(err as Error)?.message}`, false);
+                }
+
+                return;
+            }
         }
 
         const isRollEnabled = bot.preferences.roll.enabled;
@@ -424,8 +441,11 @@ const bot: BotManager = {
             if (userWithRolls) {
                 bot.cdRoll = now;
 
-                userWithRolls.send.roll()
-                    .catch(err => bot.log.error(`User ${userWithRolls.username} couldn't roll: ${err.message}`, false))
+                try {
+                    await userWithRolls.send.roll();
+                } catch (err) {
+                    bot.log.error(`User ${userWithRolls.username || "?"} couldn't roll: ${(err as Error)?.message}`, false);
+                }
 
                 return;
             }
@@ -442,7 +462,7 @@ const bot: BotManager = {
 
     handleNewChatAppend(nodes) {
         document.querySelector("div[class^='scrollerSpacer']")?.scrollIntoView();
-        
+
         if (!bot.preferences) {
             bot.error("Couldn't read bot preferences");
             return;
@@ -469,10 +489,17 @@ const bot: BotManager = {
 
                 if (botUser && messageContent) {
                     if (interactionInfo.command === "tu") {
-                        const matchRolls = LANG[bot.preferences.guild.language].regex.tu_rolls.exec(messageContent);
-                        const matchRollsUs = LANG[bot.preferences.guild.language].regex.tu_rolls_us.exec(messageContent);
-                        const matchPower = LANG[bot.preferences.guild.language].regex.tu_power.exec(messageContent);
-                        const matchKakeraConsumption = LANG[bot.preferences.guild.language].regex.tu_kakera_consumption.exec(messageContent);
+                        const localization = LANG[bot.preferences.guild.language];
+
+                        const matchRolls = localization.regex.tu_rolls.exec(messageContent);
+                        const matchRollsUs = localization.regex.tu_rolls_us.exec(messageContent);
+                        const matchPower = localization.regex.tu_power.exec(messageContent);
+                        const matchKakeraConsumption = localization.regex.tu_kakera_consumption.exec(messageContent);
+                        const matchDaily = messageContent.includes(localization.string.tu_daily);
+                        const matchDK = messageContent.includes(localization.string.tu_dk);
+
+                        botUser.info.set(USER_INFO.CAN_DAILY, matchDaily);
+                        botUser.info.set(USER_INFO.CAN_DK, matchDK);
 
                         if (matchRolls) {
                             const rolls = Number(matchRolls[1]);
@@ -517,8 +544,8 @@ const bot: BotManager = {
                             botUser.info.set(USER_INFO.CAN_RT, false);
                         }
 
-                        if (LANG[bot.preferences.guild.language].regex.tu_marry.test(messageContent)) {
-                            const cantMarry = LANG[bot.preferences.guild.language].regex.tu_cant_marry.test(messageContent);
+                        if (localization.regex.tu_marry.test(messageContent)) {
+                            const cantMarry = localization.regex.tu_cant_marry.test(messageContent);
 
                             botUser.info.set(USER_INFO.CAN_MARRY, !cantMarry);
                         }
@@ -532,6 +559,11 @@ const bot: BotManager = {
 
                         syncUserInfo(botUser);
                         return;
+                    } else if (interactionInfo.command === "daily") {
+                        if (messageContent === "✅") {
+                            botUser.info.set(USER_INFO.CAN_DAILY, false);
+                            //# bot.log.event(EVENTS.DAILY)
+                        }
                     }
                 }
             }

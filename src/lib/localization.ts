@@ -5,6 +5,8 @@ interface Localization {
         newSoulmate: string
         ownedCharacter: string
         silver4Bonus: string
+        tu_daily: string
+        tu_dk: string
     }
     regex: {
         tu_rolls: RegExp
@@ -26,7 +28,9 @@ export const LANG: {
         string: {
             newSoulmate: "Now your SOUL",
             ownedCharacter: "Belongs",
-            silver4Bonus: "(Silver IV bonus)"
+            silver4Bonus: "(Silver IV bonus)",
+            tu_daily: "$daily i", /// $daily is available
+            tu_dk: "$dk i" /// $dk is ready
         },
         regex: {
             tu_rolls: /have (\d+) rolls/,
@@ -44,7 +48,9 @@ export const LANG: {
         string: {
             newSoulmate: "Es ahora tu ALMA",
             ownedCharacter: "Pertenece",
-            silver4Bonus: "(Bonus de Silver IV)"
+            silver4Bonus: "(Bonus de Silver IV)",
+            tu_daily: "$daily es", /// $daily está disponible
+            tu_dk: "$dk es" /// $dk está listo
         },
         regex: {
             tu_rolls: /Tienes (\d+) rolls/,
@@ -62,7 +68,9 @@ export const LANG: {
         string: {
             newSoulmate: "Maintenant votre SOUL",
             ownedCharacter: "Appartient",
-            silver4Bonus: "(bonus Silver IV)"
+            silver4Bonus: "(bonus Silver IV)",
+            tu_daily: "$daily e", /// $daily est disponible
+            tu_dk: "$dk e" /// $dk est prêt
         },
         regex: {
             tu_rolls: /avez (\d+) rolls/,
@@ -80,7 +88,9 @@ export const LANG: {
         string: {
             newSoulmate: "Sua nova ALMA",
             ownedCharacter: "Pertence",
-            silver4Bonus: "(Silver IV Bônus)"
+            silver4Bonus: "(Silver IV Bônus)",
+            tu_daily: "$daily es", /// $daily está pronto
+            tu_dk: "$dk es" /// $dk está pronto
         },
         regex: {
             tu_rolls: /tem (\d+) rolls/,

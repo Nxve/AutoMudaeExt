@@ -53,7 +53,8 @@ const SLASH_COMMANDS = {
     "hx": { version: "832172373536669707", id: "832172373536669706" },
     "ha": { version: "832172457028747337", id: "832172457028747336" },
     "hg": { version: "832172416192872459", id: "832172416192872458" },
-    "tu": { version: "832171928072224790", id: "832171928072224789" }
+    "tu": { version: "832171928072224790", id: "832171928072224789" },
+    "daily": { version: "947059341406638110", id: "946747833032261662" }
 } as const;
 
 export type SlashCommand = keyof typeof SLASH_COMMANDS;

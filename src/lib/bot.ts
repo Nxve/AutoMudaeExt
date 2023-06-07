@@ -178,7 +178,9 @@ export const USER_INFO = {
     POWER: "power",
     CAN_RT: "can_rt",
     CAN_MARRY: "can_marry",
-    CONSUMPTION: "kakera_consumption"
+    CONSUMPTION: "kakera_consumption",
+    CAN_DAILY: "can_daily",
+    CAN_DK: "can_dk"
 } as const;
 
 export type UserInfo = typeof USER_INFO[keyof typeof USER_INFO];
@@ -400,6 +402,9 @@ export class BotUser {
             }
 
             await this.sendSlashCommand(this.manager.preferences.roll.type);
+        },
+        daily: async () => {
+            await this.sendSlashCommand("daily");
         },
         message: async (message: string) => {
             const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);

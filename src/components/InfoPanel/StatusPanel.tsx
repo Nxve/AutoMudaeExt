@@ -12,6 +12,8 @@ function StatusPanel({ userStatus }: IStatusPanelProps) {
     let highestPower = -Infinity;
     let canClaimCharacter = false;
     let canRT = false;
+    let canDaily = false;
+
     const arrayUserStatus = [...userStatus];
 
     for (const [, userinfo] of userStatus) {
@@ -23,6 +25,7 @@ function StatusPanel({ userStatus }: IStatusPanelProps) {
         /// Check for falsy local var (canClaimCharacter) so it doesnt get to read each user marry availability unnecessarily
         if (!canClaimCharacter && userinfo.get(USER_INFO.CAN_MARRY) as boolean) canClaimCharacter = true;
         if (!canRT && userinfo.get(USER_INFO.CAN_RT) as boolean) canRT = true;
+        if (!canDaily && userinfo.get(USER_INFO.CAN_DAILY) as boolean) canDaily = true;
     }
 
     return (
@@ -108,6 +111,22 @@ function StatusPanel({ userStatus }: IStatusPanelProps) {
                             <em key={`status-rt-${username}`}>
                                 <span>{username}:</span>
                                 <span>{userinfo.get(USER_INFO.CAN_RT) as boolean ? "Yes" : "No"}</span>
+                            </em>
+                        )
+                    }
+                </div>
+            </div>
+            <div className="row-outer">
+                <em>
+                    <span>Can Daily:</span>
+                    <span>{canDaily ? "Yes" : "No"}</span>
+                </em>
+                <div className="row-inner">
+                    {
+                        arrayUserStatus.map(([username, userinfo]) =>
+                            <em key={`status-daily-${username}`}>
+                                <span>{username}:</span>
+                                <span>{userinfo.get(USER_INFO.CAN_DAILY) as boolean ? "Yes" : "No"}</span>
                             </em>
                         )
                     }
