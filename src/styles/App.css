@@ -67,12 +67,12 @@ main {
   padding-left: var(--items-padding-inline);
 }
 
-.item-wrapper> input[type=checkbox]:last-child{
+.item-wrapper>input[type=checkbox]:last-child {
   margin-right: var(--items-padding-inline);
 }
 
 .item-wrapper>button {
-  padding: 4px var(--items-padding-inline);
+  padding: 2px var(--items-padding-inline);
 }
 
 .item-wrapper input[type=range] {
