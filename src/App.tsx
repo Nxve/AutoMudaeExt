@@ -6,7 +6,7 @@ import type { Stats, UserStatus } from "./lib/bot/status_stats";
 import type { InfoPanelType, MenuCategory, MenuSubcategory } from "./lib/app_types";
 import { blankLogs, blankUnseen } from "./lib/bot/log";
 import { blankStats } from "./lib/bot/status_stats";
-import { isTokenValid, jsonMapSetReplacer, jsonMapSetReviver, minifyToken } from "./lib/utils";
+import { getClipboard, isTokenValid, jsonMapSetReplacer, jsonMapSetReviver, minifyToken, replaceProperties, setClipboard } from "./lib/utils";
 import { BOT_STATES, NOTIFICATIONS, defaultPreferences } from "./lib/bot";
 import { MESSAGES } from "./lib/messaging";
 import { SVGS } from "./lib/svgs";
@@ -257,6 +257,35 @@ function App() {
     toggleMenuSubcategory();
     setUsernames({});
     chrome.storage.local.remove("usernames");
+  };
+
+  const importPreferences = () => {
+    //# Dont replace pref.preferencesVersion, check for minmax of numbers and such
+
+    // try {
+    //   const clipboardContent = getClipboard();
+
+    //   if (clipboardContent) {
+    //     const importedObj: object = JSON.parse(atob(clipboardContent), jsonMapSetReviver);
+
+    //     replaceProperties(preferences, importedObj);
+    //   }
+    // } catch (error) {
+    //   console.error("Couldn't import preferences:", error);
+    //   //# Pop error at app error tab
+    // } finally {
+    //   toggleMenuCategory();
+    //   toggleMenuSubcategory();
+    // }
+  };
+
+  const exportPreferences = () => {
+    toggleMenuCategory();
+    toggleMenuSubcategory();
+
+    const base64Preferences = btoa(JSON.stringify(preferences, jsonMapSetReplacer));
+
+    setClipboard(base64Preferences);
   };
 
   /// BOT
@@ -863,7 +892,7 @@ function App() {
                   }} />
               </div>
             </Item>
-            <Item category="extra" label="Extra">
+            <Item category="extra" label="Mudae Extra">
               <div className="item-wrapper inner-0">
                 <span>$daily</span>
                 <input type="checkbox" checked={preferences.getDaily} onChange={(e) => setPreferences({ ...preferences, getDaily: e.target.checked })} />
@@ -891,7 +920,13 @@ function App() {
                 <input type="checkbox" checked={preferences.kl.enabled} onChange={(e) => setPreferences(pref => { pref.kl.enabled = e.target.checked; return { ...pref } })} />
               </div>
             </Item>
-            <Item category="cleanup" label="Clean Up">
+            <Item category="importexport" label="Import/Export">
+              <div className="item-wrapper inner-0 not-implemented" data-tooltip="Import from clipboard">
+                <button onClick={importPreferences}>Import config</button>
+              </div>
+              <div className="item-wrapper inner-0" data-tooltip="Export to clipboard">
+                <button onClick={exportPreferences}>Export config</button>
+              </div>
               <div className="item-wrapper inner-0">
                 <button onClick={reset}>Reset all config</button>
               </div>

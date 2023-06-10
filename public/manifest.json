@@ -16,7 +16,9 @@
   "permissions": [
     "tabs",
     "storage",
-    "scripting"
+    "scripting",
+    "clipboardRead",
+    "clipboardWrite"
   ],
   "host_permissions": [
     "https://discord.com/channels/*"

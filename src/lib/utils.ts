@@ -61,17 +61,76 @@ export const getPeriodHash = (date: Date, intervalMinute: number): string => {
 
     const hour = date.getHours();
 
-    start.setMinutes(intervalMinute, 0, 0); 
-    end.setMinutes(intervalMinute - 1, 59, 99); 
+    start.setMinutes(intervalMinute, 0, 0);
+    end.setMinutes(intervalMinute - 1, 59, 99);
 
     if (start.getTime() > date.getTime()) {
-      start.setHours(hour - 1);
+        start.setHours(hour - 1);
     } else {
         end.setHours(hour + 1, intervalMinute - 1, 59);
-    }  
-  
+    }
+
     const startTimestamp = start.getTime();
     const endTimestamp = end.getTime();
-  
+
     return `${startTimestamp}-${endTimestamp}`;
-  }
+}
+
+export const getClipboard = (): string | null => {
+    const $input = document.createElement("input");
+
+    document.body.appendChild($input);
+
+    $input.focus();
+
+    document.execCommand("paste");
+
+    const content = $input.value.trim();
+
+    $input.blur();
+
+    document.body.removeChild($input);
+
+    return content || null;
+};
+
+export const setClipboard = (text: string) => {
+    const $textArea = document.createElement("textarea");
+
+    $textArea.textContent = text;
+
+    document.body.appendChild($textArea);
+
+    $textArea.select();
+
+    document.execCommand('copy');
+
+    $textArea.blur();
+
+    document.body.removeChild($textArea);
+};
+
+export const replaceProperties = (objectA: any, objectB: any) => {
+    for (const key in objectA) {
+        if (objectA.hasOwnProperty(key)) {
+            const typeA = typeof objectA[key];
+            const typeB = typeof objectB[key];
+
+            if (objectB.hasOwnProperty(key) && typeA === typeB) {
+                if (typeA === "object" && objectA[key] instanceof Set) {
+                    if (objectB[key] instanceof Set) {
+                        objectA[key] = new Set(objectB[key]);
+                    }
+                } else if (typeA === "object" && objectA[key] instanceof Map) {
+                    if (objectB[key] instanceof Map) {
+                        objectA[key] = new Map(objectB[key]);
+                    }
+                } else if (typeA === "object" && !Array.isArray(objectA[key]) && !Array.isArray(objectB[key])) {
+                    replaceProperties(objectA[key], objectB[key]);
+                } else {
+                    objectA[key] = objectB[key];
+                }
+            }
+        }
+    }
+}
