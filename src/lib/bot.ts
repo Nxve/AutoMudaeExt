@@ -1,6 +1,6 @@
 import type { BotEvent } from "./bot/event";
 import type { DiscordMessage } from "./discord";
-import { EMOJIS, INTERVAL_SEND_MESSAGE, MUDAE_CLAIM_RESET_DEFAULT, MUDAE_USER_ID, VERSION_PREFERENCES } from "./consts";
+import { EMOJIS, INTERVAL_SEND_MESSAGE, MUDAE_CLAIM_RESET_DEFAULT, MUDAE_KAKERALOOTS_MAX, MUDAE_USER_ID, VERSION_PREFERENCES } from "./consts";
 import { SVGS } from "./svgs";
 import { KAKERAS, SLASH_COMMANDS, SlashCommand } from "./mudae";
 import { minifyToken, sleep } from "./utils";
@@ -207,11 +207,15 @@ export class BotUser {
     username?: string
     avatar?: string
     nick?: string
+    canKL: boolean
+    fullOfPins: boolean
 
     constructor(botManager: BotManager, token: string, id?: string, username?: string, avatar?: string) {
         this.manager = botManager;
         this.token = token;
         this.info = new Map();
+        this.canKL = true;
+        this.fullOfPins = false;
 
         if (id && username && avatar) {
             this.id = id;
@@ -365,7 +369,7 @@ export class BotUser {
         }
     }
 
-    private async sendSlashCommand(command: SlashCommand): Promise<void> {
+    private async sendSlashCommand(command: SlashCommand, appendOptions?: string): Promise<void> {
         const slashCommandInfo = SLASH_COMMANDS[command];
         const guildId = this.manager.info.get(DISCORD_INFO.GUILD_ID);
         const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);
@@ -384,7 +388,7 @@ export class BotUser {
                     "authorization": this.token,
                     "content-type": "multipart/form-data; boundary=----BDR",
                 },
-                "body": `------BDR\r\nContent-Disposition: form-data; name="payload_json"\r\n\r\n{"type":2,"application_id":"${MUDAE_USER_ID}","guild_id":"${guildId}","channel_id":"${channelId}","session_id":"${this.manager.sessionID}","data":{"version":"${slashCommandInfo.version}","id":"${slashCommandInfo.id}","name":"${command}","type":1},"nonce":"${++this.manager.nonce}"}\r\n------BDR--\r\n`
+                "body": `------BDR\r\nContent-Disposition: form-data; name="payload_json"\r\n\r\n{"type":2,"application_id":"${MUDAE_USER_ID}","guild_id":"${guildId}","channel_id":"${channelId}","session_id":"${this.manager.sessionID}","data":{"version":"${slashCommandInfo.version}","id":"${slashCommandInfo.id}","name":"${command}","type":1${appendOptions ? `,"options":[${appendOptions}]` : ""}},"nonce":"${++this.manager.nonce}"}\r\n------BDR--\r\n`
             });
         } catch (error) {
             console.error(error);
@@ -405,6 +409,14 @@ export class BotUser {
         },
         daily: async () => {
             await this.sendSlashCommand("daily");
+        },
+        kakeraLoots: async (amount: number = 1) => {
+            amount = _.clamp(amount, 1, MUDAE_KAKERALOOTS_MAX);
+
+            await this.sendSlashCommand("kakeraloots", `{"type":1,"name":"get","options":[{"type":3,"name":"input","value":"${amount}"}]}`);
+        },
+        autoReleasePin: async () => {
+            await this.sendSlashCommand("mudapins", `{"type":1,"name":"autoreleasepin","options":[]}`);
         },
         message: async (message: string) => {
             const channelId = this.manager.info.get(DISCORD_INFO.CHANNEL_ID);

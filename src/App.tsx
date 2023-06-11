@@ -905,7 +905,7 @@ function App() {
                   <option value="reset_power">To reset power</option>
                 </select>
               </div>
-              <div className="item-wrapper inner-0 not-implemented" data-tooltip="Spam kakeraloots. Won't roll at the same time">
+              <div className="item-wrapper inner-0" data-tooltip="Spam kakeraloots. Won't roll at the same time">
                 <span>$kl</span>
                 <span>{preferences.kl.amount}x</span>
                 <Range

@@ -383,7 +383,10 @@ const bot: BotManager = {
             bot.didWarnThisPeriod = false;
 
             /// Forcing users to gather their info with /tu again
-            bot.users.forEach(user => user.info.delete(USER_INFO.ROLLS_LEFT));
+            bot.users.forEach(user => {
+                user.canKL = true;
+                user.info.delete(USER_INFO.ROLLS_LEFT)
+            });
 
             return;
         }
@@ -423,9 +426,21 @@ const bot: BotManager = {
             }
         }
 
-        const isRollEnabled = bot.preferences.roll.enabled;
+        if (bot.preferences.kl.enabled) {
+            const userThatCanKL = bot.getUserWithCriteria(user => user.canKL);
 
-        if (isRollEnabled) {
+            if (userThatCanKL) {
+                if (userThatCanKL.fullOfPins) {
+                    await userThatCanKL.send.autoReleasePin();
+                    return;
+                }
+
+                await userThatCanKL.send.kakeraLoots(bot.preferences.kl.amount);
+                return;
+            }
+        }
+
+        if (bot.preferences.roll.enabled) {
             const canRollNow = now - bot.lastSeenMessageTime > INTERVAL_DONT_ROLL_AFTER_ACTIVITY && now - bot.cdRoll > INTERVAL_ROLL;
 
             if (!canRollNow) return;
@@ -492,9 +507,9 @@ const bot: BotManager = {
                         const localization = LANG[bot.preferences.guild.language];
 
                         const matchRolls = localization.regex.tu_rolls.exec(messageContent);
-                        const matchRollsUs = localization.regex.tu_rolls_us.exec(messageContent);
+                        const matchRollsUs = localization.regex.tu_rollsUs.exec(messageContent);
                         const matchPower = localization.regex.tu_power.exec(messageContent);
-                        const matchKakeraConsumption = localization.regex.tu_kakera_consumption.exec(messageContent);
+                        const matchKakeraConsumption = localization.regex.tu_kakeraConsumption.exec(messageContent);
                         const matchDaily = messageContent.includes(localization.string.tu_daily);
                         const matchDK = messageContent.includes(localization.string.tu_dk);
 
@@ -545,7 +560,7 @@ const bot: BotManager = {
                         }
 
                         if (localization.regex.tu_marry.test(messageContent)) {
-                            const cantMarry = localization.regex.tu_cant_marry.test(messageContent);
+                            const cantMarry = localization.regex.tu_cantMarry.test(messageContent);
 
                             botUser.info.set(USER_INFO.CAN_MARRY, !cantMarry);
                         }
@@ -564,6 +579,19 @@ const bot: BotManager = {
                             botUser.info.set(USER_INFO.CAN_DAILY, false);
                             //# bot.log.event(EVENTS.DAILY)
                         }
+
+                        return;
+                    } else if (interactionInfo.command === "kakeraloots get") {
+                        const localization = LANG[bot.preferences.guild.language];
+
+                        if (messageContent.startsWith(localization.string.kl_notEnoughKakera)) {
+                            botUser.canKL = false;
+                        } else if (messageContent.startsWith("Error:")) { /// Full of pins
+                            //# Check if is "Error:" for every lang
+                            botUser.fullOfPins = true;
+                        }
+
+                        return;
                     }
                 }
             }
@@ -764,7 +792,7 @@ const bot: BotManager = {
 
             if (messageContent) {
                 /// Handle character claims & steals
-                const characterClaimMatch = LANG[bot.preferences.guild.language].regex.marry_notification.exec(messageContent.trim());
+                const characterClaimMatch = LANG[bot.preferences.guild.language].regex.marryNotification.exec(messageContent.trim());
 
                 if (characterClaimMatch || messageContent.includes(LANG[bot.preferences.guild.language].string.silver4Bonus)) {
                     let usernameThatClaimed: string | undefined;

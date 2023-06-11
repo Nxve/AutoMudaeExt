@@ -54,7 +54,9 @@ const SLASH_COMMANDS = {
     "ha": { version: "832172457028747337", id: "832172457028747336" },
     "hg": { version: "832172416192872459", id: "832172416192872458" },
     "tu": { version: "832171928072224790", id: "832171928072224789" },
-    "daily": { version: "947059341406638110", id: "946747833032261662" }
+    "daily": { version: "947059341406638110", id: "946747833032261662" },
+    "kakeraloots": { version: "1014442375478788198", id: "1014442375478788197" },
+    "mudapins": { version: "1014442418692706405", id: "1014442418692706404" }
 } as const;
 
 export type SlashCommand = keyof typeof SLASH_COMMANDS;

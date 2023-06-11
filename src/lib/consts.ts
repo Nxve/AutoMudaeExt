@@ -18,6 +18,7 @@ export const MUDAE_SILVERIV_KAKERA_BONUS = 200;
 export const MUDAE_CLAIM_RESET_MIN = 60;
 export const MUDAE_CLAIM_RESET_MAX = 600;
 export const MUDAE_CLAIM_RESET_DEFAULT = 180;
+export const MUDAE_KAKERALOOTS_MAX = 100;
 
 /// Emojis
 export const EMOJIS = {
