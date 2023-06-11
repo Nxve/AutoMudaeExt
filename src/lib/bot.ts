@@ -53,6 +53,7 @@ export interface Preferences {
     kl: {
         enabled: boolean
         amount: number
+        arlp: boolean
     }
 };
 
@@ -485,6 +486,7 @@ export const defaultPreferences = (): Preferences => ({
     },
     kl: {
         enabled: false,
-        amount: 1
+        amount: 1,
+        arlp: true
     }
 });

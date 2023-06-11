@@ -430,13 +430,15 @@ const bot: BotManager = {
             const userThatCanKL = bot.getUserWithCriteria(user => user.canKL);
 
             if (userThatCanKL) {
-                if (userThatCanKL.fullOfPins) {
-                    await userThatCanKL.send.autoReleasePin();
+                if (!userThatCanKL.fullOfPins) {
+                    await userThatCanKL.send.kakeraLoots(bot.preferences.kl.amount);
                     return;
                 }
 
-                await userThatCanKL.send.kakeraLoots(bot.preferences.kl.amount);
-                return;
+                if (bot.preferences.kl.arlp) {
+                    await userThatCanKL.send.autoReleasePin();
+                    return;
+                }
             }
         }
 

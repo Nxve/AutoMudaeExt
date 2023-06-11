@@ -919,6 +919,13 @@ function App() {
                 />
                 <input type="checkbox" checked={preferences.kl.enabled} onChange={(e) => setPreferences(pref => { pref.kl.enabled = e.target.checked; return { ...pref } })} />
               </div>
+              {
+                preferences.kl.enabled &&
+                <div className="item-wrapper inner-0" data-tooltip="Auto release pins when full">
+                  <span>$arlp</span>
+                  <input type="checkbox" checked={preferences.kl.arlp} onChange={(e) => setPreferences(pref => { pref.kl.arlp = e.target.checked; return { ...pref } })} />
+                </div>
+              }
             </Item>
             <Item category="importexport" label="Import/Export">
               <div className="item-wrapper inner-0 not-implemented" data-tooltip="Import from clipboard">
