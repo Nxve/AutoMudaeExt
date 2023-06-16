@@ -57,23 +57,14 @@ export const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(() 
 
 export const getPeriodHash = (date: Date, intervalMinute: number): string => {
     const start = new Date(date);
-    const end = new Date(date);
-
-    const hour = date.getHours();
 
     start.setMinutes(intervalMinute, 0, 0);
-    end.setMinutes(intervalMinute - 1, 59, 99);
 
     if (start.getTime() > date.getTime()) {
-        start.setHours(hour - 1);
-    } else {
-        end.setHours(hour + 1, intervalMinute - 1, 59);
+        start.setHours(date.getHours() - 1);
     }
 
-    const startTimestamp = start.getTime();
-    const endTimestamp = end.getTime();
-
-    return `${startTimestamp}-${endTimestamp}`;
+    return start.getTime().toString();
 }
 
 export const getClipboard = (): string | null => {

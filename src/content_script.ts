@@ -33,6 +33,9 @@ const bot: BotManager = {
     chatObserver: new MutationObserver(ms => ms.forEach(m => { if (m.addedNodes.length) { bot.handleNewChatAppend(m.addedNodes) } })),
 
     log: {
+        console(...args) {
+            console.log("%c[AutoMudae]", "color: pink", ...args);
+        },
         warn(message) {
             chromeMessageQueue.sendMessage({ id: MESSAGES.BOT.WARN, data: message });
         },
@@ -41,7 +44,7 @@ const bot: BotManager = {
         },
         event(eventType, content) {
             chromeMessageQueue.sendMessage({ id: MESSAGES.BOT.EVENT, data: { eventType, content } });
-        },
+        }
     },
 
     message: {
@@ -376,9 +379,11 @@ const bot: BotManager = {
         const nowDate = new Date();
 
         /// Handle hourly period reset
-        const currentPeriodHash = getPeriodHash(nowDate, 36);
+        const currentPeriodHash = getPeriodHash(nowDate, bot.preferences.guild.resetMinute);
 
         if (currentPeriodHash !== bot.lastPeriodHash) {
+            bot.log.console("Different period. Resetting users info to send /tu.");
+
             bot.lastPeriodHash = currentPeriodHash;
             bot.didWarnThisPeriod = false;
 

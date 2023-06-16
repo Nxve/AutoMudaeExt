@@ -16,7 +16,7 @@ import NavBar from "./components/NavBar";
 import Range from "./components/Range";
 import React, { useCallback, useEffect, useState } from "react";
 import "./styles/App.css";
-import { DISCORD_EMBED_FIELD_MAX, DISCORD_EMBED_FIELD_MIN, DISCORD_NICK_MAX, DISCORD_NICK_MIN, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN, VERSION_PREFERENCES } from "./lib/consts";
+import { DISCORD_EMBED_FIELD_MAX, DISCORD_EMBED_FIELD_MIN, DISCORD_NICK_MAX, DISCORD_NICK_MIN, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN, PREFERENCES_VERSION } from "./lib/consts";
 import { ItemsWrapper, Item } from "./components/Items";
 import { EVENTS } from "./lib/bot/event";
 
@@ -446,7 +446,7 @@ function App() {
           const loadedPreferences: Preferences = JSON.parse(result.preferences, jsonMapSetReviver);
           const prefVersion: number | undefined = loadedPreferences.preferencesVersion;
 
-          const isPrefVersionCompatible = prefVersion != null && prefVersion === VERSION_PREFERENCES;
+          const isPrefVersionCompatible = prefVersion != null && prefVersion === PREFERENCES_VERSION;
 
           if (isPrefVersionCompatible) {
             setPreferences(loadedPreferences);
@@ -457,9 +457,9 @@ function App() {
 
             console.log("Loaded preferences.", loadedPreferences);
           } else {
-            console.log(`Preferences were incompatible. Preferences version: ${prefVersion ? "v" + prefVersion : "unknown"}. Current version: v${VERSION_PREFERENCES}`);
-
             chrome?.storage?.local.remove("preferences");
+
+            console.log(`Preferences were incompatible. Preferences version: ${prefVersion ? "v" + prefVersion : "unknown"}. Current version: v${PREFERENCES_VERSION}`);
           }
         }
 
@@ -891,6 +891,18 @@ function App() {
                     setPreferences({ ...preferences });
                   }} />
               </div>
+              <div className="item-wrapper inner-0">
+                <span>Reset minute</span>
+                <span>xx:{preferences.guild.resetMinute}</span>
+                <Range
+                  min={0}
+                  max={59}
+                  value={preferences.guild.resetMinute}
+                  onChange={(e) => {
+                    preferences.guild.resetMinute = Number(e.target.value);
+                    setPreferences({ ...preferences });
+                  }} />
+              </div>
             </Item>
             <Item category="extra" label="Mudae Extra">
               <div className="item-wrapper inner-0">
@@ -927,7 +939,11 @@ function App() {
                 </div>
               }
             </Item>
-            <Item category="importexport" label="Import/Export">
+            <Item category="ext_management" label="Ext Management">
+              <div className="item-wrapper inner-0 not-implemented" data-tooltip="Can slow down performance slightly">
+                <span>Debug</span>
+                <input type="checkbox" checked={preferences.debug} onChange={(e) => setPreferences({ ...preferences, debug: e.target.checked })} />
+              </div>
               <div className="item-wrapper inner-0 not-implemented" data-tooltip="Import from clipboard">
                 <button onClick={importPreferences}>Import config</button>
               </div>

@@ -1,5 +1,5 @@
 /// Bot
-export const VERSION_PREFERENCES = 1;
+export const PREFERENCES_VERSION = 2;
 export const INTERVAL_GATHER_INFO = 1000;
 export const INTERVAL_SEND_MESSAGE = 1500;
 export const INTERVAL_THINK = 200;
@@ -19,6 +19,7 @@ export const MUDAE_CLAIM_RESET_MIN = 60;
 export const MUDAE_CLAIM_RESET_MAX = 600;
 export const MUDAE_CLAIM_RESET_DEFAULT = 180;
 export const MUDAE_KAKERALOOTS_MAX = 100;
+export const MUDAE_DEFAULT_RESET_MINUTE = 36;
 
 /// Emojis
 export const EMOJIS = {

@@ -1,6 +1,6 @@
 import type { BotEvent } from "./bot/event";
 import type { DiscordMessage } from "./discord";
-import { EMOJIS, INTERVAL_SEND_MESSAGE, MUDAE_CLAIM_RESET_DEFAULT, MUDAE_KAKERALOOTS_MAX, MUDAE_USER_ID, VERSION_PREFERENCES } from "./consts";
+import { EMOJIS, INTERVAL_SEND_MESSAGE, MUDAE_CLAIM_RESET_DEFAULT, MUDAE_DEFAULT_RESET_MINUTE, MUDAE_KAKERALOOTS_MAX, MUDAE_USER_ID, PREFERENCES_VERSION } from "./consts";
 import { SVGS } from "./svgs";
 import { KAKERAS, SLASH_COMMANDS, SlashCommand } from "./mudae";
 import { minifyToken, sleep } from "./utils";
@@ -17,13 +17,15 @@ export type PrefDailyKakera = "off" | "available" | "reset_power";
 
 export interface Preferences {
     preferencesVersion: number
-    useUsers: PrefUseUsers;
-    tokenList: Set<string>;
+    useUsers: PrefUseUsers
+    tokenList: Set<string>
     dk: PrefDailyKakera
     getDaily: boolean
+    debug: boolean
     guild: {
         language: PrefLanguage;
         claimReset: number
+        resetMinute: number
     }
     notifications: {
         type: PrefNotificationType
@@ -87,6 +89,7 @@ export interface BotManager {
     getUserWithCriteria(cb: (user: BotUser) => boolean): BotUser | null
 
     log: {
+        console(...args: unknown[]): void
         warn(message: string): void
         error(message: string, isCritical: boolean): void
         event(eventType: BotEvent, content: any): void
@@ -450,14 +453,17 @@ export class BotUser {
 };
 
 export const defaultPreferences = (): Preferences => ({
-    preferencesVersion: VERSION_PREFERENCES,
+    preferencesVersion: PREFERENCES_VERSION,
     useUsers: "logged",
     tokenList: new Set(),
     dk: "off",
     getDaily: false,
+    debug: false,
     guild: {
         language: "en",
-        claimReset: MUDAE_CLAIM_RESET_DEFAULT
+        claimReset: MUDAE_CLAIM_RESET_DEFAULT,
+        resetMinute: MUDAE_DEFAULT_RESET_MINUTE
+
     },
     notifications: {
         type: "sound",
