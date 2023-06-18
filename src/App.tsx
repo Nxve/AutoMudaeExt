@@ -442,8 +442,9 @@ function App() {
     /// Load preferences & usernames from Chrome's storage
     chrome?.storage?.local.get(["preferences", "usernames"])
       .then(result => {
-        if (Object.hasOwn(result, "preferences")) {
+        if (Object.hasOwn(result, "preferences") && typeof result.preferences === "string") {
           const loadedPreferences: Preferences = JSON.parse(result.preferences, jsonMapSetReviver);
+
           const prefVersion: number | undefined = loadedPreferences.preferencesVersion;
 
           const isPrefVersionCompatible = prefVersion != null && prefVersion === PREFERENCES_VERSION;
@@ -940,7 +941,7 @@ function App() {
               }
             </Item>
             <Item category="ext_management" label="Ext Management">
-              <div className="item-wrapper inner-0 not-implemented" data-tooltip="Can slow down performance slightly">
+              <div className="item-wrapper inner-0 not-implemented">
                 <span>Debug</span>
                 <input type="checkbox" checked={preferences.debug} onChange={(e) => setPreferences({ ...preferences, debug: e.target.checked })} />
               </div>
