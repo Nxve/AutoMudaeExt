@@ -8,7 +8,7 @@ import { blankLogs, blankUnseen } from "./lib/bot/log";
 import { blankStats } from "./lib/bot/status_stats";
 import { EVENTS } from "./lib/bot/event";
 import { MESSAGES } from "./lib/messaging";
-import { dateToHMS } from "./lib/utils";
+import { dateToHMS, jsonMapSetReplacer, jsonMapSetReviver } from "./lib/utils";
 import { MUDAE_SILVERIV_KAKERA_BONUS } from "./lib/consts";
 
 const updateBadge = (unseen: Unseen) => {
@@ -44,9 +44,13 @@ const getUnseen = async (): Promise<Unseen> => {
 };
 
 const getPreferences = async (): Promise<Preferences | null> => {
-    const data = await chrome.storage.local.get("preferences");
+    const result = await chrome.storage.local.get("preferences");
 
-    return data.preferences || null;
+    if (!Object.hasOwn(result, "preferences")) return null;
+
+    const preferences: Preferences = JSON.parse(result.preferences, jsonMapSetReviver);
+
+    return preferences;
 };
 
 const updateStats = async (cb: (stats: Stats) => Stats) => {
@@ -60,8 +64,10 @@ const updateLogs = async (cb: (logs: Logs) => Logs) => {
 const updatePreferences = async (cb: (preferences: Preferences) => Preferences) => {
     const preferences = await getPreferences();
 
-    if (preferences){
-        chrome.storage.local.set({preferences: cb(preferences)});
+    if (preferences) {
+        const newPreferences: Preferences = cb(preferences);
+        const stringifiedPreferences = JSON.stringify(newPreferences, jsonMapSetReplacer);
+        chrome.storage.local.set({ preferences: stringifiedPreferences });
     }
 };
 
