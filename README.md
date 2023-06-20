@@ -6,10 +6,10 @@ It is still in early development, thus unavailable in webstore.
 You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
 
 #### Roadmap to get it working:
+- Import/Export config
+    - Maybe only lists
 - Notifications
     - Some of the events should trigger sound notifications
-- Guild Config:
-    - Option to get from `/server settings`
 - Advise about it's requirements:
     - Maybe after installation, in a "guide" page
     - Requirements:
@@ -18,7 +18,7 @@ You can expect it to be available for use after the completion of the below road
         - /tu exposing every needed info
 
 #### Secondary plans:
-- Import char/series list
+- Target characters by value/ranking
 - Add kakera from $dk to stats
 - Auto scroll to bottom of lists (Tokens, Characters, Series and Target users)
 - Account management:
