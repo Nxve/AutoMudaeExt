@@ -5,6 +5,7 @@ export const INTERVAL_SEND_MESSAGE = 1500;
 export const INTERVAL_THINK = 200;
 export const INTERVAL_ROLL = 1500;
 export const INTERVAL_DONT_ROLL_AFTER_ACTIVITY = 2000;
+export const MAX_CLAIM_DELAY_IN_SECONDS = 8.1;
 
 /// Discord
 export const DISCORD_NICK_MIN = 1;

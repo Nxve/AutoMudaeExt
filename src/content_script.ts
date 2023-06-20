@@ -1,11 +1,11 @@
-import type { BotManager, BotState, Preferences } from "./lib/bot";
+import type { BotManager, BotState, Preferences, ChatNodeTags } from "./lib/bot";
 import type { Message } from "./lib/messaging";
 import type { KAKERA } from "./lib/mudae";
 import type { UserStatus } from "./lib/bot/status_stats";
 import type { DiscordMessage } from "./lib/discord";
 import { DISCORD_INFO } from "./lib/bot";
 import { BotUser, USER_INFO, ROLL_TYPES } from "./lib/bot";
-import { INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID, INTERVAL_DONT_ROLL_AFTER_ACTIVITY, INTERVAL_GATHER_INFO } from "./lib/consts";
+import { INTERVAL_THINK, INTERVAL_ROLL, MUDAE_USER_ID, INTERVAL_DONT_ROLL_AFTER_ACTIVITY, INTERVAL_GATHER_INFO, MAX_CLAIM_DELAY_IN_SECONDS } from "./lib/consts";
 import { MESSAGES, ChromeMessageQueue } from "./lib/messaging";
 import { KAKERAS } from "./lib/mudae";
 import { getPeriodHash, jsonMapSetReplacer, jsonMapSetReviver, minifyToken, randomFloat, randomSessionID } from "./lib/utils";
@@ -482,35 +482,42 @@ const bot: BotManager = {
         }
     },
 
-    handleNewChatAppend(nodes) {
-        document.querySelector("div[class^='scrollerSpacer']")?.scrollIntoView();
+    async processChatNode($msg) {
+        const tags: ChatNodeTags = [];
 
         if (!bot.preferences) {
-            bot.error("Couldn't read bot preferences");
-            return;
-        };
+            tags.push(["aborted", "no preferences found"]);
+            return tags;
+        }
 
-        nodes.forEach(async _node => {
-            if (!bot.preferences) return;
+        if ($msg.tagName !== "LI") return null;
 
-            const $msg = _node as HTMLElement;
+        tags.push("message");
 
-            if ($msg.tagName !== "LI") return;
+        bot.lastSeenMessageTime = performance.now();
 
-            bot.lastSeenMessageTime = performance.now();
+        if (!await bot.message.isFromMudae($msg)) {
+            tags.push("not-from-mudae");
+            return tags;
+        }
 
-            if (!await bot.message.isFromMudae($msg)) return;
+        const interactionInfo = await bot.message.getInteractionInfo($msg);
+        const messageContent: string | undefined = ($msg.querySelector("div[id^='message-content']") as HTMLDivElement | null)?.innerText;
 
-            const interactionInfo = await bot.message.getInteractionInfo($msg);
-            const messageContent: string | undefined = ($msg.querySelector("div[id^='message-content']") as HTMLDivElement | null)?.innerText;
+        let botUser: BotUser | null = null;
 
-            let botUser: BotUser | null = null;
+        if (interactionInfo) {
+            tags.push("slash-command");
 
-            if (interactionInfo) {
-                botUser = bot.getUserWithCriteria(user => user.id === interactionInfo.userId);
+            botUser = bot.getUserWithCriteria(user => user.id === interactionInfo.userId);
 
-                if (botUser && messageContent) {
+            if (botUser) {
+                tags.push(["prompt-user", botUser.username || ""]);
+
+                if (messageContent) {
                     if (interactionInfo.command === "tu") {
+                        tags.push(["mudae-command", "tu"]);
+
                         const localization = LANG[bot.preferences.guild.language];
 
                         const matchRolls = localization.regex.tu_rolls.exec(messageContent);
@@ -575,20 +582,28 @@ const bot: BotManager = {
                         const missingUserInfo = botUser.missingInfo();
 
                         if (missingUserInfo.length > 0) {
+                            tags.push(["aborted", "missing info"]);
+
                             bot.error(`Couldn't retrieve info for user ${botUser.username}: ${missingUserInfo}`);
-                            return;
+                            return tags;
                         }
 
                         syncUserInfo(botUser);
-                        return;
+                        return tags;
                     } else if (interactionInfo.command === "daily") {
+                        tags.push(["mudae-command", "daily"]);
+
                         if (messageContent === "✅") {
                             botUser.info.set(USER_INFO.CAN_DAILY, false);
                             //# bot.log.event(EVENTS.DAILY)
+                            return tags;
                         }
 
-                        return;
+                        tags.push("no-more-daily");
+                        return tags;
                     } else if (interactionInfo.command === "kakeraloots get") {
+                        tags.push(["mudae-command", "kl"]);
+
                         const localization = LANG[bot.preferences.guild.language];
 
                         if (messageContent.startsWith(localization.string.kl_notEnoughKakera)) {
@@ -598,325 +613,423 @@ const bot: BotManager = {
                             botUser.fullOfPins = true;
                         }
 
-                        return;
+                        return tags;
                     }
                 }
             }
+        }
 
-            if (!bot.hasNeededInfo()) return;
+        if (!bot.hasNeededInfo()) {
+            tags.push(["aborted", "missing info"]);
+            return tags;
+        }
 
-            /// Handle character messages
-            const $imageWrapper = $msg.querySelector("div[class^='embedDescription'] + div[class^='imageContent'] div[class^='imageWrapper']") as HTMLDivElement | null;
-            const isSlashRolled = interactionInfo ? ROLL_TYPES.includes(interactionInfo.command as any) : false;
+        /// Handle character messages
+        const $imageWrapper = $msg.querySelector("div[class^='embedDescription'] + div[class^='imageContent'] div[class^='imageWrapper']") as HTMLDivElement | null;
+        const isSlashRolled = interactionInfo ? ROLL_TYPES.includes(interactionInfo.command as any) : false;
 
-            if (isSlashRolled || $imageWrapper) {
-                const characterName = ($msg.querySelector("span[class^='embedAuthorName']") as HTMLElement | null)?.innerText;
+        if (isSlashRolled || $imageWrapper) {
+            tags.push(["character-roll-im", isSlashRolled ? "slash" : "typed"]);
 
-                if (!characterName) {
-                    /// Handle "no more rolls" messages
-                    if (messageContent) {
-                        const noMoreRollsMatch = LANG[bot.preferences.guild.language].regex.noMoreRolls.exec(messageContent);
+            const characterName = ($msg.querySelector("span[class^='embedAuthorName']") as HTMLElement | null)?.innerText;
 
-                        if (noMoreRollsMatch) {
-                            if (botUser) {
-                                setTimeout(() => {
-                                    const user = botUser;
+            if (!characterName) {
+                /// Handle "no more rolls" messages
+                if (messageContent) {
+                    const noMoreRollsMatch = LANG[bot.preferences.guild.language].regex.noMoreRolls.exec(messageContent);
 
-                                    user?.send.tu()
-                                        .catch(err => bot.log.error(`User ${user.username} couldn't send /tu: ${err.message}`, false))
-                                }, 250);
-                            }
+                    if (noMoreRollsMatch) {
+                        tags.push(["no-more-rolls", botUser ? "me" : "other"]);
 
-                            return;
+                        if (botUser) {
+                            setTimeout(() => {
+                                const user = botUser;
+
+                                user?.send.tu()
+                                    .catch(err => bot.log.error(`User ${user.username} couldn't send /tu: ${err.message}`, false))
+                            }, 250);
                         }
-                    }
 
-                    bot.log.error("Couldn't get character name from message <NotImplementedReference>", false); //# Add reference to message
-                    return;
-                }
-
-                const $footer = $msg.querySelector("span[class^='embedFooterText']") as HTMLSpanElement | null;
-                const isOwned = !!($footer && $footer.innerText.includes(LANG[bot.preferences.guild.language].string.ownedCharacter));
-
-                /// Decreases rolls count && handle new soulmates
-                if (botUser) {
-                    const rollsUs = botUser.info.get(USER_INFO.ROLLS_LEFT_US) as number | undefined;
-
-                    if (rollsUs != null && rollsUs > 0) {
-                        botUser.info.set(USER_INFO.ROLLS_LEFT_US, Math.max(rollsUs - 1, 0));
-                    } else {
-                        const rollsLeft = botUser.info.get(USER_INFO.ROLLS_LEFT) as number;
-
-                        botUser.info.set(USER_INFO.ROLLS_LEFT, Math.max(rollsLeft - 1, 0));
-                    }
-
-                    syncUserInfo(botUser);
-
-                    const $embedDescription = $msg.querySelector("div[class^='embedDescription']") as HTMLElement | null;
-
-                    if ($embedDescription && $embedDescription.innerText.includes(LANG[bot.preferences.guild.language].string.newSoulmate)) {
-                        bot.log.event(EVENTS.SOULMATE, { character: characterName, user: botUser.username });
+                        return tags;
                     }
                 }
 
-                /// Check if should try to claim
-                if (!isOwned) {
-                    const claimWishedByMe = bot.preferences.claim.wishedByMe;
-                    const claimWishedByOthers = bot.preferences.claim.wishedByOthers && bot.preferences.claim.targetUsersList.size > 0;
-                    const claimFromListCharacters = bot.preferences.claim.fromListCharacters && bot.preferences.claim.characterList.size > 0;
-                    const claimFromListSeries = bot.preferences.claim.fromListSeries && bot.preferences.claim.seriesList.size > 0;
+                tags.push(["aborted", "no character name"]);
 
-                    /// Don't want to claim
-                    if (!claimWishedByMe && !claimWishedByOthers && !claimFromListCharacters && !claimFromListSeries) return;
+                bot.log.error("Couldn't get character name from message <NotImplementedReference>", false); //# Add reference to message
+                return tags;
+            }
 
-                    let isThisInteresting = false;
+            const $footer = $msg.querySelector("span[class^='embedFooterText']") as HTMLSpanElement | null;
+            const isOwned = !!($footer && $footer.innerText.includes(LANG[bot.preferences.guild.language].string.ownedCharacter));
 
-                    const mentionedNicknames: string[] = [...$msg.querySelectorAll("span.mention")].map($mention => ($mention as HTMLElement).innerText.slice(1));
+            tags.push(["character-owned", isOwned ? "yes" : "no"]);
 
-                    if (claimWishedByMe || claimWishedByOthers) {
-                        for (const mentionedNick of mentionedNicknames) {
-                            //# Check whether this mentioned botUser can claim. If so, skip the marriageable user part
-                            if ((claimWishedByMe && bot.getUserWithCriteria(user => user.nick === mentionedNick)) || (claimWishedByOthers && bot.preferences.claim.targetUsersList.has(mentionedNick))) {
+            /// Decreases rolls count && handle new soulmates
+            if (botUser) {
+                const rollsUs = botUser.info.get(USER_INFO.ROLLS_LEFT_US) as number | undefined;
+
+                if (rollsUs != null && rollsUs > 0) {
+                    botUser.info.set(USER_INFO.ROLLS_LEFT_US, Math.max(rollsUs - 1, 0));
+                    tags.push(["decreased-rolls", "us"]);
+                } else {
+                    const rollsLeft = botUser.info.get(USER_INFO.ROLLS_LEFT) as number;
+
+                    botUser.info.set(USER_INFO.ROLLS_LEFT, Math.max(rollsLeft - 1, 0));
+                    tags.push(["decreased-rolls", "default"]);
+                }
+
+                syncUserInfo(botUser);
+
+                const $embedDescription = $msg.querySelector("div[class^='embedDescription']") as HTMLElement | null;
+
+                if ($embedDescription && $embedDescription.innerText.includes(LANG[bot.preferences.guild.language].string.newSoulmate)) {
+                    tags.push("new-soulmate");
+                    bot.log.event(EVENTS.SOULMATE, { character: characterName, user: botUser.username });
+                }
+            }
+
+            /// Check if should try to claim
+            if (!isOwned) {
+                const claimWishedByMe = bot.preferences.claim.wishedByMe;
+                const claimWishedByOthers = bot.preferences.claim.wishedByOthers && bot.preferences.claim.targetUsersList.size > 0;
+                const claimFromListCharacters = bot.preferences.claim.fromListCharacters && bot.preferences.claim.characterList.size > 0;
+                const claimFromListSeries = bot.preferences.claim.fromListSeries && bot.preferences.claim.seriesList.size > 0;
+
+                /// Don't want to claim
+                if (!claimWishedByMe && !claimWishedByOthers && !claimFromListCharacters && !claimFromListSeries) return tags;
+
+                let isThisInteresting = false;
+
+                const mentionedNicknames: string[] = [...$msg.querySelectorAll("span.mention")].map($mention => ($mention as HTMLElement).innerText.slice(1));
+
+                if (claimWishedByMe || claimWishedByOthers) {
+                    for (const mentionedNick of mentionedNicknames) {
+                        //# Check whether this mentioned botUser can claim. If so, skip the marriageable user part
+
+                        if (claimWishedByMe) {
+                            const botUserThatWished = bot.getUserWithCriteria(user => user.nick === mentionedNick);
+
+                            if (botUserThatWished) {
+                                tags.push(["interesting", `wished by ${botUserThatWished.username || "me"}`]);
                                 isThisInteresting = true;
                                 break;
                             }
                         }
-                    }
 
-                    const isProtected = !!$msg.querySelector("img[alt=':wishprotect:']");
-                    const marriageableUser = bot.getMarriageableUser({ nicknames: mentionedNicknames, ...((isProtected && interactionInfo) && { userId: interactionInfo.userId }) });
-
-                    if (marriageableUser && !isThisInteresting && (claimFromListCharacters || claimFromListSeries) && (!bot.preferences.claim.onlyLastReset || bot.isLastReset())) {
-                        //# Remove this character from charList/seriesList when claimed (When claimed, not here)
-
-                        if (claimFromListCharacters && bot.preferences.claim.characterList.has(characterName)) {
+                        if (claimWishedByOthers && bot.preferences.claim.targetUsersList.has(mentionedNick)) {
+                            tags.push(["interesting", `snipe ${mentionedNick}`]);
                             isThisInteresting = true;
-                        }
-
-                        if (!isThisInteresting && claimFromListCharacters) {
-                            const seriesName = ($msg.querySelector("div[class^='embedDescription']") as HTMLElement | null)?.innerText.split("\n")[0];
-
-                            if (!seriesName) {
-                                bot.log.error("Couldn't get series name from message <NotImplementedReference>", false); //# Add reference to message
-                            } else if (bot.preferences.claim.seriesList.has(seriesName)) {
-                                isThisInteresting = true;
-                            }
-                        }
-                    }
-
-                    if (isThisInteresting) {
-                        bot.log.event(EVENTS.FOUND_CHARACTER, { character: characterName });
-
-                        if (marriageableUser) {
-                            //# Verify if marriageableUser can still marry after all delay calculations (In case of multiple marriageable characters at the same time)
-
-                            let claimDelay = bot.preferences.claim.delay;
-
-                            if (claimDelay > 0) {
-                                if (bot.preferences.claim.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
-
-                                claimDelay *= 1000;
-                            }
-
-                            const canClaimImmediately = !isProtected || (interactionInfo && marriageableUser.id === interactionInfo.userId);
-
-                            if (!canClaimImmediately) claimDelay = 2905 + Math.max(claimDelay - 2905, 0);
-
-                            const thisClaim = () => {
-                                marriageableUser.pressMessageButton($msg)
-                                    .catch(buttonError => {
-                                        marriageableUser.reactToMessage($msg)
-                                            .catch(reactError => bot.log.error(`User ${marriageableUser.username} couldn't claim a character: ${reactError.message}`, false));
-                                    });
-                            };
-
-                            if (!claimDelay) return thisClaim();
-
-                            setTimeout(() => thisClaim(), 2905 + Math.max(claimDelay - 2905, 0));
-
-                            return;
-                        }
-
-                        bot.log.warn(`Can't claim character ${characterName} right now.`); //# Add reference to character message
-                    }
-
-                    return;
-                }
-
-                /// Owned characters
-                const $kakeraImg: HTMLImageElement | null = $msg.querySelector("button img");
-
-                if ($kakeraImg) {
-                    const kakeraCode = $kakeraImg.alt;
-                    let kakeraToGet: KAKERA | null = null;
-
-                    for (const kakera of (bot.preferences.kakera.perToken.get("all") as Set<KAKERA>)) {
-                        if (KAKERAS[kakera].internalName === kakeraCode) {
-                            kakeraToGet = kakera;
                             break;
                         }
                     }
+                }
 
-                    for (const botUser of bot.users) {
-                        let kakeraToGetPerUser = kakeraToGet;
+                const isProtected = !!$msg.querySelector("img[alt=':wishprotect:']");
+                const marriageableUser = bot.getMarriageableUser({ nicknames: mentionedNicknames, ...((isProtected && interactionInfo) && { userId: interactionInfo.userId }) });
 
-                        if (!kakeraToGetPerUser && bot.preferences.useUsers === "tokenlist") {
-                            for (const kakera of (bot.preferences.kakera.perToken.get(botUser.token) as Set<KAKERA>)) {
-                                if (KAKERAS[kakera].internalName === kakeraCode) {
-                                    kakeraToGetPerUser = kakera;
-                                    break;
-                                }
-                            }
-                        }
+                if (isProtected) {
+                    tags.push("wish-protected");
+                }
 
-                        if (kakeraToGetPerUser) {
-                            const powerCost: number = kakeraToGetPerUser === "PURPLE" ? 0 : (botUser.info.get(USER_INFO.CONSUMPTION) as number);
+                if (marriageableUser && !isThisInteresting && (claimFromListCharacters || claimFromListSeries) && (!bot.preferences.claim.onlyLastReset || bot.isLastReset())) {
+                    if (claimFromListCharacters && bot.preferences.claim.characterList.has(characterName)) {
+                        tags.push(["interesting", "character list"]);
+                        isThisInteresting = true;
+                    }
 
-                            if ((botUser.info.get(USER_INFO.POWER) as number) >= powerCost) {
-                                let claimDelay = bot.preferences.kakera.delay;
+                    if (!isThisInteresting && claimFromListCharacters) {
+                        const seriesName = ($msg.querySelector("div[class^='embedDescription']") as HTMLElement | null)?.innerText.split("\n")[0];
 
-                                const thisClaim = () => {
-                                    botUser.pressMessageButton($msg)
-                                        .catch(err => bot.log.error(`User ${botUser.username} couldn't claim kakera: ${err.message}`, false));
-                                };
-
-                                if (claimDelay > 0) {
-                                    if (bot.preferences.kakera.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
-
-                                    setTimeout(() => thisClaim(), claimDelay * 1000);
-                                    return;
-                                }
-
-                                thisClaim();
-                                return;
-                            }
+                        if (!seriesName) {
+                            tags.push(["error", "no series found"]);
+                            bot.log.error("Couldn't get series name from message <NotImplementedReference>", false); //# Add reference to message
+                        } else if (bot.preferences.claim.seriesList.has(seriesName)) {
+                            tags.push(["interesting", "series list"]);
+                            isThisInteresting = true;
                         }
                     }
                 }
 
-                return;
+                if (isThisInteresting) {
+                    bot.log.event(EVENTS.FOUND_CHARACTER, { character: characterName });
+
+                    if (marriageableUser) {
+                        //# Verify if marriageableUser can still marry after all delay calculations (In case of multiple marriageable characters at the same time)
+
+                        let claimDelay = bot.preferences.claim.delay;
+
+                        if (claimDelay > 0) {
+                            if (bot.preferences.claim.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
+
+                            claimDelay *= 1000;
+                        }
+
+                        const canClaimImmediately = !isProtected || (interactionInfo && marriageableUser.id === interactionInfo.userId);
+
+                        // if (!canClaimImmediately) claimDelay = 2905 + Math.max(claimDelay - 2905, 0);
+                        if (!canClaimImmediately) claimDelay = _.clamp(2905, claimDelay, MAX_CLAIM_DELAY_IN_SECONDS) * 1000;
+
+                        const thisClaim = () => {
+                            marriageableUser.pressMessageButton($msg)
+                                .catch(buttonError => {
+                                    marriageableUser.reactToMessage($msg)
+                                        .catch(reactError => bot.log.error(`User ${marriageableUser.username} couldn't claim a character: ${reactError.message}`, false));
+                                });
+                        };
+
+                        if (!claimDelay) {
+                            thisClaim();
+                            tags.push(["will-try-marry", "no-delay"]);
+                            return tags;
+                        }
+
+                        claimDelay = 2905 + Math.max(claimDelay - 2905, 0);
+
+                        setTimeout(() => thisClaim(), claimDelay);
+                        tags.push(["will-try-marry", claimDelay + "ms"]);
+
+                        return tags;
+                    }
+
+                    tags.push("cant-marry");
+                    bot.log.warn(`Can't claim character ${characterName} right now.`); //# Add reference to character message
+                }
+
+                return tags;
             }
 
-            if (messageContent) {
-                /// Handle character claims & steals
-                const characterClaimMatch = LANG[bot.preferences.guild.language].regex.marryNotification.exec(messageContent.trim());
+            /// Owned characters
+            const $kakeraImg: HTMLImageElement | null = $msg.querySelector("button img");
 
-                if (characterClaimMatch || messageContent.includes(LANG[bot.preferences.guild.language].string.silver4Bonus)) {
-                    let usernameThatClaimed: string | undefined;
-                    let characterName: string | undefined;
-                    let botUserThatClaimed: BotUser | null = null;
+            if ($kakeraImg) {
+                const kakeraCode = $kakeraImg.alt;
+                let kakeraToGet: KAKERA | null = null;
 
-                    if (characterClaimMatch) {
-                        usernameThatClaimed = characterClaimMatch[1];
-                        characterName = characterClaimMatch[2];
+                tags.push(["has-kakera", kakeraCode]);
 
-                        if (usernameThatClaimed) {
-                            botUserThatClaimed = bot.getUserWithCriteria((user) => user.username === usernameThatClaimed);
-                        }
+                for (const kakera of (bot.preferences.kakera.perToken.get("all") as Set<KAKERA>)) {
+                    if (KAKERAS[kakera].internalName === kakeraCode) {
+                        tags.push(["want-kakera", "all"]);
+                        kakeraToGet = kakera;
+                        break;
                     }
+                }
 
-                    /// Claim & Kakera bonuses
-                    if (botUserThatClaimed) {
-                        botUserThatClaimed.info.set(USER_INFO.CAN_MARRY, false);
+                if (!kakeraToGet && bot.preferences.useUsers === "logged") return tags;
 
-                        let kakeraFromBonuses: number = 0;
+                for (const botUser of bot.users) {
+                    let kakeraToGetPerUser = kakeraToGet;
 
-                        const matchKakeraFromBronzeIV = /\n\+(\d+)\s\(.*Bronze IV.*\)/.exec(messageContent);
-                        const matchKakeraFromEmeraldIV = /\n\+(\d+)\(.*Emerald IV.*\)/.exec(messageContent);
-
-                        if (matchKakeraFromBronzeIV) {
-                            const kakeraFromBronzeIV: number = Number(matchKakeraFromBronzeIV[1]);
-
-                            kakeraFromBonuses += kakeraFromBronzeIV;
-                        }
-
-                        if (matchKakeraFromEmeraldIV) {
-                            const kakeraFromEmeraldIV: number = Number(matchKakeraFromEmeraldIV[1]);
-
-                            kakeraFromBonuses += kakeraFromEmeraldIV;
-                        }
-
-                        bot.log.event(EVENTS.CLAIM, { user: usernameThatClaimed, character: characterName, kakera: kakeraFromBonuses });
-
-                        syncUserInfo(botUserThatClaimed);
-                        //# beep
-                    }
-
-                    const $mentions = $msg.querySelectorAll("span.mention");
-                    const botUsers = new Set(bot.users);
-                    const mentionedBotUsernames: string[] = [];
-
-                    let isMentioningMe = false;
-
-                    for (let i = 0; i < $mentions.length; i++) {
-                        const mentionedNick = ($mentions[i] as HTMLSpanElement).innerText.slice(1);
-
-                        for (const botUser of botUsers) {
-                            if (botUser.nick === mentionedNick) {
-                                isMentioningMe = true;
-
-                                botUsers.delete(botUser);
-
-                                mentionedBotUsernames.push(botUser.username as string);
+                    if (!kakeraToGetPerUser) {
+                        for (const kakera of (bot.preferences.kakera.perToken.get(botUser.token) as Set<KAKERA>)) {
+                            if (KAKERAS[kakera].internalName === kakeraCode) {
+                                tags.push(["want-kakera", botUser.username || "user"]);
+                                kakeraToGetPerUser = kakera;
                                 break;
                             }
                         }
                     }
 
-                    /// Silver IV bonus kakera
-                    if (mentionedBotUsernames.length > 0) {
-                        bot.log.event(EVENTS.KAKERA_SILVERIV, mentionedBotUsernames);
-                    }
+                    if (kakeraToGetPerUser) {
+                        if (kakeraToGetPerUser === "PURPLE" || (botUser.info.get(USER_INFO.POWER) as number) >= (botUser.info.get(USER_INFO.CONSUMPTION) as number)) {
+                            let claimDelay = bot.preferences.kakera.delay;
 
-                    /// Steal
-                    if (isMentioningMe && !botUserThatClaimed) {
-                        const stealMessage = characterClaimMatch
-                            ? `User ${usernameThatClaimed} claimed ${characterName} wished by you.`
-                            : "A character wished by you was claimed by another user.";
+                            const thisClaim = () => {
+                                botUser.pressMessageButton($msg)
+                                    .catch(err => bot.log.error(`User ${botUser.username} couldn't claim kakera: ${err.message}`, false));
+                            };
 
-                        bot.log.event(EVENTS.STEAL, { user: usernameThatClaimed, character: characterName });
-                        bot.log.warn(stealMessage);
-                    }
+                            if (claimDelay > 0) {
+                                if (bot.preferences.kakera.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
 
-                    return;
-                }
+                                claimDelay *= 1000;
 
-                /// Handle kakera claiming
-                const $kakeraClaimStrong = $msg.querySelector("div[id^='message-content'] span[class^='emojiContainer'] + strong") as HTMLElement | null;
-
-                if ($kakeraClaimStrong) {
-                    const kakeraClaimMatch = /^(.+)\s\+(\d+)$/.exec($kakeraClaimStrong.innerText);
-
-                    if (kakeraClaimMatch) {
-                        const messageUsername = kakeraClaimMatch[1];
-                        const kakeraQuantity = kakeraClaimMatch[2];
-
-                        const user = bot.getUserWithCriteria((user) => user.username === messageUsername);
-
-                        if (user) {
-                            const kakeraType = ($kakeraClaimStrong.previousElementSibling?.firstElementChild as HTMLImageElement | null)?.alt.replace(/:/g, '');
-
-                            if (!kakeraType) {
-                                bot.log.error("Couldn't get kakera type from message [?]", false); //# Add reference to message
-                                return;
+                                setTimeout(() => thisClaim(), claimDelay);
+                                tags.push(["will-try-claimk", claimDelay + "ms"]);
+                                return tags;
                             }
 
-                            const powerCost: number = kakeraType === KAKERAS.PURPLE.internalName ? 0 : (user.info.get(USER_INFO.CONSUMPTION) as number);
-
-                            if (powerCost > 0) {
-                                const newPower = Math.max((user.info.get(USER_INFO.POWER) as number) - powerCost, 0);
-
-                                user.info.set(USER_INFO.POWER, newPower);
-                                syncUserInfo(user);
-                            }
-
-                            bot.log.event(EVENTS.KAKERA, { user: user.username, amount: kakeraQuantity });
+                            thisClaim();
+                            tags.push(["will-try-claimk", "no-delay"]);
+                            return tags;
                         }
-
-                        return;
+                        tags.push("cant-claimk");
                     }
                 }
             }
+
+            return tags;
+        }
+
+        if (messageContent) {
+            /// Handle character claims & steals
+            const characterClaimMatch = LANG[bot.preferences.guild.language].regex.marryNotification.exec(messageContent.trim());
+
+            if (characterClaimMatch || messageContent.includes(LANG[bot.preferences.guild.language].string.silver4Bonus)) {
+                let usernameThatClaimed: string | undefined;
+                let characterName: string | undefined;
+                let botUserThatClaimed: BotUser | null = null;
+
+                if (characterClaimMatch) {
+                    usernameThatClaimed = characterClaimMatch[1];
+                    characterName = characterClaimMatch[2];
+
+                    if (usernameThatClaimed) {
+                        botUserThatClaimed = bot.getUserWithCriteria((user) => user.username === usernameThatClaimed);
+                    }
+                }
+
+                /// Claim & Kakera bonuses
+                if (botUserThatClaimed) {
+                    botUserThatClaimed.info.set(USER_INFO.CAN_MARRY, false);
+
+                    let kakeraFromBonuses: number = 0;
+
+                    const matchKakeraFromBronzeIV = /\n\+(\d+)\s\(.*Bronze IV.*\)/.exec(messageContent);
+                    const matchKakeraFromEmeraldIV = /\n\+(\d+)\(.*Emerald IV.*\)/.exec(messageContent);
+
+                    if (matchKakeraFromBronzeIV) {
+                        const kakeraFromBronzeIV: number = Number(matchKakeraFromBronzeIV[1]);
+
+                        kakeraFromBonuses += kakeraFromBronzeIV;
+                    }
+
+                    if (matchKakeraFromEmeraldIV) {
+                        const kakeraFromEmeraldIV: number = Number(matchKakeraFromEmeraldIV[1]);
+
+                        kakeraFromBonuses += kakeraFromEmeraldIV;
+                    }
+
+                    bot.log.event(EVENTS.CLAIM, { user: usernameThatClaimed, character: characterName, kakera: kakeraFromBonuses });
+
+                    syncUserInfo(botUserThatClaimed);
+                    //# beep
+                }
+
+                tags.push(["marry-notification", botUserThatClaimed ? (botUserThatClaimed.username || "me") : "other"]);
+
+                const $mentions = $msg.querySelectorAll("span.mention");
+                const botUsers = new Set(bot.users);
+                const mentionedBotUsernames: string[] = [];
+
+                let isMentioningMe = false;
+
+                for (let i = 0; i < $mentions.length; i++) {
+                    const mentionedNick = ($mentions[i] as HTMLSpanElement).innerText.slice(1);
+
+                    for (const botUser of botUsers) {
+                        if (botUser.nick === mentionedNick) {
+                            isMentioningMe = true;
+
+                            botUsers.delete(botUser);
+
+                            tags.push(["mentions-me", mentionedNick]);
+
+                            mentionedBotUsernames.push(botUser.username as string);
+                            break;
+                        }
+                    }
+                }
+
+                /// Silver IV bonus kakera
+                if (mentionedBotUsernames.length > 0) {
+                    bot.log.event(EVENTS.KAKERA_SILVERIV, mentionedBotUsernames);
+                }
+
+                /// Steal
+                if (isMentioningMe && !botUserThatClaimed) {
+                    tags.push("steal");
+
+                    const stealMessage = characterClaimMatch
+                        ? `User ${usernameThatClaimed} claimed ${characterName} wished by you.`
+                        : "A character wished by you was claimed by another user.";
+
+                    bot.log.event(EVENTS.STEAL, { user: usernameThatClaimed, character: characterName });
+                    bot.log.warn(stealMessage);
+                }
+
+                return tags;
+            }
+
+            /// Handle kakera claiming
+            const $kakeraClaimStrong = $msg.querySelector("div[id^='message-content'] span[class^='emojiContainer'] + strong") as HTMLElement | null;
+
+            if ($kakeraClaimStrong) {
+                const kakeraClaimMatch = /^(.+)\s\+(\d+)$/.exec($kakeraClaimStrong.innerText);
+
+                if (kakeraClaimMatch) {
+                    const messageUsername = kakeraClaimMatch[1];
+                    const kakeraQuantity = kakeraClaimMatch[2];
+
+                    const user = bot.getUserWithCriteria((user) => user.username === messageUsername);
+
+                    tags.push(["kakera-notification", user ? (user.username || "me") : "other"]);
+
+                    if (user) {
+                        const kakeraType = ($kakeraClaimStrong.previousElementSibling?.firstElementChild as HTMLImageElement | null)?.alt.replace(/:/g, '');
+
+                        if (!kakeraType) {
+                            tags.push(["aborted", "no kakera type found"]);
+
+                            bot.log.error("Couldn't get kakera type from message [?]", false); //# Add reference to message
+                            return tags;
+                        }
+
+                        const powerCost: number = kakeraType === KAKERAS.PURPLE.internalName ? 0 : (user.info.get(USER_INFO.CONSUMPTION) as number);
+
+                        if (powerCost > 0) {
+                            const newPower = Math.max((user.info.get(USER_INFO.POWER) as number) - powerCost, 0);
+
+                            user.info.set(USER_INFO.POWER, newPower);
+                            syncUserInfo(user);
+                        }
+
+                        bot.log.event(EVENTS.KAKERA, { user: user.username, amount: kakeraQuantity });
+                    }
+
+                    return tags;
+                }
+            }
+        }
+
+        return tags;
+    },
+
+    async handleNewChatAppend(nodes) {
+        document.querySelector("div[class^='scrollerSpacer']")?.scrollIntoView();
+
+        if (!bot.preferences) {
+            bot.error("Couldn't read bot preferences");
+            return;
+        };
+
+        nodes.forEach(async node => {
+            const $msg = node as HTMLElement;
+
+            const debugTags = await bot.processChatNode($msg);
+
+            if (bot.preferences?.debug && debugTags && debugTags.length > 0) {
+                const tagsClasses: string[] = [];
+                const tagsLabels: string[] = [];
+
+                debugTags.forEach(tag => {
+                    if (typeof tag === "string") {
+                        tagsClasses.push(`automudae-debug-${tag}`);
+                        tagsLabels.push(tag);
+                        return;
+                    }
+
+                    const [tagId, tagInfo] = tag;
+
+                    tagsClasses.push(`automudae-debug-${tagId}`);
+                    tagsLabels.push(`${tagId}: ${tagInfo}`);
+                });
+
+                $msg.dataset.automudae_debug_tags = tagsLabels.join("\n");
+                $msg.classList.add(...tagsClasses);
+            }
+
         });
     },
 };

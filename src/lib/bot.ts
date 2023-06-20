@@ -6,6 +6,8 @@ import { KAKERAS, SLASH_COMMANDS, SlashCommand } from "./mudae";
 import { minifyToken, sleep } from "./utils";
 import _ from "lodash";
 
+export type ChatNodeTags = (string | [string, string])[];
+
 export const ROLL_TYPES = ["wx", "wa", "wg", "hx", "ha", "hg"] as const;
 
 export type PrefUseUsers = "logged" | "tokenlist";
@@ -83,8 +85,9 @@ export interface BotManager {
     getMarriageableUser(priority?: { nicknames?: string[], userId?: string }): BotUser | null
     setup(): Promise<void>
     toggle(): void
-    think(): void
+    think(): Promise<void>
     error(message: string): void
+    processChatNode($msg: HTMLElement): Promise<ChatNodeTags | null>
     handleNewChatAppend(nodes: NodeList): void
     getUserWithCriteria(cb: (user: BotUser) => boolean): BotUser | null
 

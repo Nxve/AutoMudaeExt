@@ -16,7 +16,7 @@ import NavBar from "./components/NavBar";
 import Range from "./components/Range";
 import React, { useCallback, useEffect, useState } from "react";
 import "./styles/App.css";
-import { DISCORD_EMBED_FIELD_MAX, DISCORD_EMBED_FIELD_MIN, DISCORD_NICK_MAX, DISCORD_NICK_MIN, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN, PREFERENCES_VERSION } from "./lib/consts";
+import { DISCORD_EMBED_FIELD_MAX, DISCORD_EMBED_FIELD_MIN, DISCORD_NICK_MAX, DISCORD_NICK_MIN, MAX_CLAIM_DELAY_IN_SECONDS, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN, PREFERENCES_VERSION } from "./lib/consts";
 import { ItemsWrapper, Item } from "./components/Items";
 import { EVENTS } from "./lib/bot/event";
 
@@ -729,7 +729,7 @@ function App() {
                     <span>Delay</span>
                     <span>{preferences.claim.delay}s</span>
                     <Range
-                      max={8.1}
+                      max={MAX_CLAIM_DELAY_IN_SECONDS}
                       step={.1}
                       value={preferences.claim.delay}
                       onChange={(e) => {
@@ -941,7 +941,7 @@ function App() {
               }
             </Item>
             <Item category="ext_management" label="Ext Management">
-              <div className="item-wrapper inner-0 not-implemented">
+              <div className="item-wrapper inner-0">
                 <span>Debug</span>
                 <input type="checkbox" checked={preferences.debug} onChange={(e) => setPreferences({ ...preferences, debug: e.target.checked })} />
               </div>

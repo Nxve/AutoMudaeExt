@@ -1,0 +1,56 @@
+[class*="automudae-debug"] {
+    --debug-color: black;
+
+    outline: 1px solid !important;
+    outline-offset: -1px;
+    outline-color: var(--debug-color) !important;
+}
+
+[class*="automudae-debug"]::after {
+    content: attr(data-automudae_debug_tags);
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    padding: 5px;
+    color: var(--debug-color);
+    text-align: end;
+    font-weight: 500;
+    white-space: pre;
+    pointer-events: none;
+    z-index: 9;
+}
+
+[class*="automudae-debug"]:hover::after {
+    background-color: black;
+    color: white;
+}
+
+.automudae-debug-mudae-command {
+    --debug-color: orange;
+}
+
+.automudae-debug-character-roll-im {
+    --debug-color: yellow;
+}
+
+.automudae-debug-no-more-rolls,
+.automudae-debug-no-more-daily {
+    --debug-color: coral;
+}
+
+.automudae-debug-new-soulmate {
+    --debug-color: magenta;
+}
+
+.automudae-debug-interesting {
+    --debug-color: cyan;
+}
+
+.automudae-debug-want-kakera {
+    --debug-color: dodgerblue;
+}
+
+.automudae-debug-aborted,
+.automudae-debug-error {
+    --debug-color: red;
+}
