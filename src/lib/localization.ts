@@ -35,7 +35,7 @@ export const LANG: {
             kl_notEnoughKakera: "You n" /// You need an additional <kakera_amount>
         },
         regex: {
-            tu_rolls: /have (\d+) rolls/,
+            tu_rolls: /have (\d+) roll/,
             tu_rollsUs: /\(\+(\d+) \$us\)/,
             tu_power: /Power: (\d+)%/,
             tu_marry: /claim/,
@@ -56,7 +56,7 @@ export const LANG: {
             kl_notEnoughKakera: "Te f" /// Te faltan <kakera_amount>
         },
         regex: {
-            tu_rolls: /Tienes (\d+) rolls/,
+            tu_rolls: /Tienes (\d+) roll/,
             tu_rollsUs: /\(\+(\d+) \$us\)/,
             tu_power: /Poder: (\d+)%/,
             tu_marry: /reclamar/,
@@ -77,7 +77,7 @@ export const LANG: {
             kl_notEnoughKakera: "Il v" /// Il vous manque encore <kakera_amount>
         },
         regex: {
-            tu_rolls: /avez (\d+) rolls/,
+            tu_rolls: /avez (\d+) roll/,
             tu_rollsUs: /\(\+(\d+) \$us\)/,
             tu_power: /Power: (\d+)%/,
             tu_marry: /vous (?:re)?marier/,
@@ -98,7 +98,7 @@ export const LANG: {
             kl_notEnoughKakera: "Você p" /// Você precisa de mais <kakera_amount>
         },
         regex: {
-            tu_rolls: /tem (\d+) rolls/,
+            tu_rolls: /tem (\d+) roll/,
             tu_rollsUs: /\(\+(\d+) \$us\)/,
             tu_power: /Power: (\d+)%/,
             tu_marry: /casar/,
