@@ -29,7 +29,7 @@ export const minifyToken = (token: string): string => token.slice(0, 7) + "..." 
 
 export const randomFloat = (min: number, max: number, decimals: number): number => parseFloat((Math.random() * (max - min) + min).toFixed(decimals));
 
-export const dateToHMS = (date: Date): string => date.toUTCString().split(" ")[4];
+export const dateToHMS = (date: Date): string => date.toTimeString().split(" ")[0];
 
 export const randomChar = (fromString: string) => fromString.charAt(Math.floor(Math.random() * fromString.length));
 
