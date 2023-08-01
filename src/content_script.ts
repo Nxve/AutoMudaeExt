@@ -1068,7 +1068,7 @@ const storeUsernameForToken = (username: string, token: string) => {
 };
 
 const handleExtensionMessage = (message: Message, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
-    if (!Object.hasOwn(message, "id")) return;
+    if (!("id" in message)) return;
 
     switch (message.id) {
         case MESSAGES.APP.GET_STATUS:

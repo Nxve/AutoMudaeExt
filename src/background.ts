@@ -46,7 +46,7 @@ const getUnseen = async (): Promise<Unseen> => {
 const getPreferences = async (): Promise<Preferences | null> => {
     const result = await chrome.storage.local.get("preferences");
 
-    if (!Object.hasOwn(result, "preferences")) return null;
+    if (!("preferences" in result)) return null;
 
     const preferences: Preferences = JSON.parse(result.preferences, jsonMapSetReviver);
 
@@ -95,7 +95,7 @@ const storeUsernameForToken = async (username: string, token: string) => {
 };
 
 chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
-    if (!Object.hasOwn(message, "id")) return;
+    if (!("id" in message)) return;
 
     switch (message.id) {
         case MESSAGES.BOT.WARN:
@@ -134,7 +134,7 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
                         stats.characters[claimUsername].push(claimCharacter);
 
                         if (claimKakera > 0) {
-                            stats.kakera[claimUsername] = Object.hasOwn(stats.kakera, claimUsername) ? stats.kakera[claimUsername] + claimKakera : claimKakera;
+                            stats.kakera[claimUsername] = (claimUsername in stats.kakera) ? stats.kakera[claimUsername] + claimKakera : claimKakera;
                         }
 
                         updatePreferences(preferences => {
@@ -152,13 +152,13 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
                         const kakeraUser: string = message.data.content.user;
                         const kakeraAmount: number = Number(message.data.content.amount);
 
-                        stats.kakera[kakeraUser] = Object.hasOwn(stats.kakera, kakeraUser) ? stats.kakera[kakeraUser] + kakeraAmount : kakeraAmount;
+                        stats.kakera[kakeraUser] = (kakeraUser in stats.kakera) ? stats.kakera[kakeraUser] + kakeraAmount : kakeraAmount;
                         break;
                     case EVENTS.KAKERA_SILVERIV:
                         const silverIVUsernames: string[] = message.data.content;
 
                         silverIVUsernames.forEach(username => {
-                            stats.kakera[username] = (Object.hasOwn(stats.kakera, username) ? stats.kakera[username] + MUDAE_SILVERIV_KAKERA_BONUS : MUDAE_SILVERIV_KAKERA_BONUS);
+                            stats.kakera[username] = (username in stats.kakera) ? stats.kakera[username] + MUDAE_SILVERIV_KAKERA_BONUS : MUDAE_SILVERIV_KAKERA_BONUS;
                         });
 
                         break;

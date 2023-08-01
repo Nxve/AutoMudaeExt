@@ -116,16 +116,6 @@ export interface BotManager {
     }
 }
 
-interface BotStates {
-    [state: string]: {
-        buttonSVG?: keyof typeof SVGS
-        buttonLabel: string
-        cantRunReason: string
-    }
-};
-
-export type BotState = keyof typeof _BOT_STATES;
-
 const _BOT_STATES = {
     "unknown": {
         buttonLabel: "...",
@@ -161,6 +151,16 @@ const _BOT_STATES = {
         cantRunReason: "<dynamic>"
     }
 } as const;
+
+export type BotState = keyof typeof _BOT_STATES;
+
+interface BotStates {
+    [state: string]: {
+        buttonSVG?: keyof typeof SVGS
+        buttonLabel: string
+        cantRunReason: string
+    }
+};
 
 export const BOT_STATES = _BOT_STATES as BotStates;
 
@@ -249,7 +249,7 @@ export class BotUser {
             throw Error(`Couldn't retrieve info about the token [${minifiedToken}]. Check console for more info`);
         }
 
-        if (!Object.hasOwn(userData, "id") || !Object.hasOwn(userData, "username") || !Object.hasOwn(userData, "avatar")) {
+        if (!("id" in userData) || !("username" in userData) || !("avatar" in userData)) {
             throw Error(`Malformed response from Discord API for token [${minifiedToken}]`);
         }
 
@@ -284,7 +284,7 @@ export class BotUser {
             }
 
             /// Rate limited
-            if (Object.hasOwn(userData, "retry_after")) {
+            if ("retry_after" in userData) {
                 const retryTime: number = userData.retry_after * 1000;
 
                 await sleep(retryTime);
@@ -292,7 +292,7 @@ export class BotUser {
                 continue;
             }
 
-            if (!Object.hasOwn(userData, "guild_member")) {
+            if (!("guild_member" in userData)) {
                 throw Error(`Token [${minifyToken(this.token)}] must be a member of this guild`);
             }
 

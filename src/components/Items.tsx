@@ -71,7 +71,7 @@ export function Item(props: React.PropsWithChildren<IItemProps>) {
                 isSelected && React.Children.map(props.children, child => {
                     const isObject = child && typeof child === "object";
 
-                    if (isObject && Object.hasOwn(child, "type")) {
+                    if (isObject && ("type" in child)) {
                         const childElement = child as React.ReactElement<React.PropsWithChildren<IItemProps>>;
 
                         if (childElement.type === Item) {

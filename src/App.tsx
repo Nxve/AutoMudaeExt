@@ -390,7 +390,7 @@ function App() {
   };
 
   const handleExtensionMessage = (message: Message, _sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
-    if (!Object.hasOwn(message, "id")) return;
+    if (!("id" in message)) return;
 
     switch (message.id) {
       case MESSAGES.BOT.SYNC_USER_INFO:
@@ -450,7 +450,7 @@ function App() {
     /// Load preferences & usernames from Chrome's storage
     chrome?.storage?.local.get(["preferences", "usernames"])
       .then(result => {
-        if (Object.hasOwn(result, "preferences") && typeof result.preferences === "string") {
+        if (("preferences" in result) && typeof result.preferences === "string") {
           const loadedPreferences: Preferences = JSON.parse(result.preferences, jsonMapSetReviver);
 
           const prefVersion: number | undefined = loadedPreferences.preferencesVersion;
@@ -472,7 +472,7 @@ function App() {
           }
         }
 
-        if (Object.hasOwn(result, "usernames")) {
+        if ("usernames" in result) {
           setUsernames(result.usernames);
           console.log("Loaded usernames.", result.usernames);
         }
@@ -498,7 +498,7 @@ function App() {
 
           setDiscordTab(tab);
 
-          if (!Object.hasOwn(BOT_STATES, response.botState)) return;
+          if (!(response.botState in BOT_STATES)) return;
 
           if (response.stringifiedUserStatus) {
             const userStatus: UserStatus = JSON.parse(response.stringifiedUserStatus, jsonMapSetReviver);

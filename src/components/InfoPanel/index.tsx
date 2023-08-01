@@ -25,7 +25,7 @@ function InfoPanel({ infoType, logs, userStatus, stats }: IInfoPanelProps) {
                     : (infoType === "status") ?
                         <StatusPanel userStatus={userStatus} /> :
                         <div>
-                            <StatsPanel stats={stats}/>
+                            <StatsPanel stats={stats} />
                         </div>
             }
         </section>
