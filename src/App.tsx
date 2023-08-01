@@ -3,7 +3,7 @@ import type { KAKERA } from "./lib/mudae";
 import type { MessageID, Message } from "./lib/messaging";
 import type { Logs, Unseen, LogType } from "./lib/bot/log";
 import type { Stats, UserStatus } from "./lib/bot/status_stats";
-import type { InfoPanelType, MenuCategory, MenuSubcategory } from "./lib/app_types";
+import type { InfoPanelType, MenuCategory, MenuList, MenuSubcategory } from "./lib/app_types";
 import { blankLogs, blankUnseen } from "./lib/bot/log";
 import { blankStats } from "./lib/bot/status_stats";
 import { getClipboard, isTokenValid, jsonMapSetReplacer, jsonMapSetReviver, minifyToken, replaceProperties, setClipboard } from "./lib/utils";
@@ -26,11 +26,14 @@ function App() {
   const [menuSubcategory, setMenuSubcategory] = useState<MenuSubcategory>(null);
   const [infoPanel, setInfoPanel] = useState<InfoPanelType>(null);
   const [configuringKakeraPerToken, setConfiguringKakeraPerToken] = useState("");
+
   const [tokenList, setTokenList] = useState<string[]>([]);
   const [targetUsersList, setTargetUsersList] = useState<string[]>([]);
   const [characterList, setCharacterList] = useState<string[]>([]);
   const [seriesList, setSeriesList] = useState<string[]>([]);
   const [usernames, setUsernames] = useState<{ [token: string]: string }>({});
+  const [lockedLists, setLockedLists] = useState<Set<MenuList>>(new Set());
+
   const [hasJustLoadedPreferences, setJustLoadedPreferences] = useState(false);
   const [didMount, setDidMount] = useState(false);
 
@@ -49,7 +52,9 @@ function App() {
 
   const isWide = menuCategory === "guild" || menuCategory === "extra" || (menuCategory === "general" && (menuSubcategory === "tokenlist" || menuSubcategory === "kakera"));
 
-  const listAdd = (listId: string) => {
+  const listAdd = (listId: MenuList) => {
+    setLockedLists(new Set([...lockedLists, listId]));
+
     switch (listId) {
       case "token_list":
         tokenList.push("");
@@ -72,7 +77,7 @@ function App() {
     }
   };
 
-  const listClear = (listId: string) => {
+  const listClear = (listId: MenuList) => {
     switch (listId) {
       case "token_list":
         preferences.tokenList = new Set();
@@ -97,7 +102,7 @@ function App() {
     setPreferences({ ...preferences });
   };
 
-  const validateListInput = (index: number, input: string, listId: string) => {
+  const validateListInput = (index: number, input: string, listId: MenuList) => {
     if (listId === "target_users" || listId === "character_list" || listId === "series_list") {
       const isTargetUsersList = listId === "target_users";
 
@@ -112,8 +117,7 @@ function App() {
         "series_list": { setter: setSeriesList, set: preferences.claim.seriesList }
       };
 
-      const targetSet = listMap[listId].set;
-      const targetSetter = listMap[listId].setter;
+      const { set: targetSet, setter: targetSetter } = listMap[listId];
 
       if (index >= targetSet.size) {
         if (isValid) {
@@ -160,6 +164,10 @@ function App() {
       }
 
       setTokenList([...preferences.tokenList]);
+    }
+
+    if (lockedLists.delete(listId)){
+      setLockedLists(new Set(lockedLists));
     }
   };
 
@@ -569,10 +577,10 @@ function App() {
                         {
                           menuSubcategory === "tokenlist" &&
                           <>
-                            <button className="button-red" data-tooltip="Clear" onClick={() => listClear("token_list")}>
+                            <button disabled={lockedLists.has("token_list")} className="button-red" data-tooltip="Clear" onClick={() => listClear("token_list")}>
                               {SVGS.X}
                             </button>
-                            <button className="button-green" data-tooltip="Add" onClick={() => listAdd("token_list")}>
+                            <button disabled={lockedLists.has("token_list")} className="button-green" data-tooltip="Add" onClick={() => listAdd("token_list")}>
                               {SVGS.PLUS}
                             </button>
                           </>
@@ -755,10 +763,10 @@ function App() {
                       {
                         menuSubcategory === "target_users" &&
                         <>
-                          <button className="button-red" data-tooltip="Clear" onClick={() => listClear("target_users")}>
+                          <button disabled={lockedLists.has("target_users")} className="button-red" data-tooltip="Clear" onClick={() => listClear("target_users")}>
                             {SVGS.X}
                           </button>
-                          <button className="button-green" data-tooltip="Add" onClick={() => listAdd("target_users")}>
+                          <button disabled={lockedLists.has("target_users")} className="button-green" data-tooltip="Add" onClick={() => listAdd("target_users")}>
                             {SVGS.PLUS}
                           </button>
                         </>
@@ -796,10 +804,10 @@ function App() {
                       {
                         menuSubcategory === "character_list" &&
                         <>
-                          <button className="button-red" data-tooltip="Clear" onClick={() => listClear("character_list")}>
+                          <button disabled={lockedLists.has("character_list")} className="button-red" data-tooltip="Clear" onClick={() => listClear("character_list")}>
                             {SVGS.X}
                           </button>
-                          <button className="button-green" data-tooltip="Add" onClick={() => listAdd("character_list")}>
+                          <button disabled={lockedLists.has("character_list")} className="button-green" data-tooltip="Add" onClick={() => listAdd("character_list")}>
                             {SVGS.PLUS}
                           </button>
                         </>
@@ -837,10 +845,10 @@ function App() {
                       {
                         menuSubcategory === "series_list" &&
                         <>
-                          <button className="button-red" data-tooltip="Clear" onClick={() => listClear("series_list")}>
+                          <button disabled={lockedLists.has("series_list")} className="button-red" data-tooltip="Clear" onClick={() => listClear("series_list")}>
                             {SVGS.X}
                           </button>
-                          <button className="button-green" data-tooltip="Add" onClick={() => listAdd("series_list")}>
+                          <button disabled={lockedLists.has("series_list")} className="button-green" data-tooltip="Add" onClick={() => listAdd("series_list")}>
                             {SVGS.PLUS}
                           </button>
                         </>
