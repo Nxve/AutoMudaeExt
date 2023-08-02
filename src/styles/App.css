@@ -167,14 +167,6 @@ label {
   background-color: var(--primary-500);
 }
 
-.button-green:hover {
-  color: var(--green-300) !important;
-}
-
-.button-red:hover {
-  color: var(--red-400) !important;
-}
-
 .kakera-cfg>span {
   font-size: .8rem;
 }

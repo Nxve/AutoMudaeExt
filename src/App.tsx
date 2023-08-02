@@ -19,6 +19,7 @@ import "./styles/App.css";
 import { DISCORD_EMBED_FIELD_MAX, DISCORD_EMBED_FIELD_MIN, DISCORD_NICK_MAX, DISCORD_NICK_MIN, MAX_CLAIM_DELAY_IN_SECONDS, MUDAE_CLAIM_RESET_MAX, MUDAE_CLAIM_RESET_MIN, PREFERENCES_VERSION } from "./lib/consts";
 import { ItemsWrapper, Item } from "./components/Items";
 import { EVENTS } from "./lib/bot/event";
+import ListControlButton from "./components/ListControlButton";
 
 function App() {
   /// App state
@@ -33,6 +34,7 @@ function App() {
   const [seriesList, setSeriesList] = useState<string[]>([]);
   const [usernames, setUsernames] = useState<{ [token: string]: string }>({});
   const [lockedLists, setLockedLists] = useState<Set<MenuList>>(new Set());
+  const [clearingList, setClearingList] = useState<MenuList | null>(null);
 
   const [hasJustLoadedPreferences, setJustLoadedPreferences] = useState(false);
   const [didMount, setDidMount] = useState(false);
@@ -53,6 +55,7 @@ function App() {
   const isWide = menuCategory === "guild" || menuCategory === "extra" || (menuCategory === "general" && (menuSubcategory === "tokenlist" || menuSubcategory === "kakera"));
 
   const listAdd = (listId: MenuList) => {
+    setClearingList(null);
     setLockedLists(new Set([...lockedLists, listId]));
 
     switch (listId) {
@@ -78,6 +81,11 @@ function App() {
   };
 
   const listClear = (listId: MenuList) => {
+    if (!clearingList) {
+      setClearingList(listId);
+      return;
+    }
+
     switch (listId) {
       case "token_list":
         preferences.tokenList = new Set();
@@ -99,6 +107,7 @@ function App() {
         break;
     }
 
+    setClearingList(null);
     setPreferences({ ...preferences });
   };
 
@@ -166,7 +175,7 @@ function App() {
       setTokenList([...preferences.tokenList]);
     }
 
-    if (lockedLists.delete(listId)){
+    if (lockedLists.delete(listId)) {
       setLockedLists(new Set(lockedLists));
     }
   };
@@ -177,10 +186,14 @@ function App() {
   };
 
   const toggleMenuCategory = (category?: MenuCategory) => {
+    setClearingList(null);
+    setMenuSubcategory(null);
     setMenuCategory(category ? (category === menuCategory ? null : category) : null);
   };
 
   const toggleMenuSubcategory = (subcategory?: MenuSubcategory) => {
+    setClearingList(null);
+
     if (!subcategory) {
       setMenuSubcategory(null);
       return;
@@ -577,12 +590,8 @@ function App() {
                         {
                           menuSubcategory === "tokenlist" &&
                           <>
-                            <button disabled={lockedLists.has("token_list")} className="button-red" data-tooltip="Clear" onClick={() => listClear("token_list")}>
-                              {SVGS.X}
-                            </button>
-                            <button disabled={lockedLists.has("token_list")} className="button-green" data-tooltip="Add" onClick={() => listAdd("token_list")}>
-                              {SVGS.PLUS}
-                            </button>
+                            <ListControlButton.Clear list="token_list" lockedLists={lockedLists} clearingList={clearingList} clickHandler={listClear} />
+                            <ListControlButton.Add list="token_list" lockedLists={lockedLists} clickHandler={listAdd} />
                           </>
                         }
                         <button {...(menuSubcategory === "tokenlist" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("tokenlist")}>
@@ -763,12 +772,8 @@ function App() {
                       {
                         menuSubcategory === "target_users" &&
                         <>
-                          <button disabled={lockedLists.has("target_users")} className="button-red" data-tooltip="Clear" onClick={() => listClear("target_users")}>
-                            {SVGS.X}
-                          </button>
-                          <button disabled={lockedLists.has("target_users")} className="button-green" data-tooltip="Add" onClick={() => listAdd("target_users")}>
-                            {SVGS.PLUS}
-                          </button>
+                          <ListControlButton.Clear list="target_users" lockedLists={lockedLists} clearingList={clearingList} clickHandler={listClear} />
+                          <ListControlButton.Add list="target_users" lockedLists={lockedLists} clickHandler={listAdd} />
                         </>
                       }
                       <button {...(menuSubcategory === "target_users" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("target_users")}>
@@ -804,12 +809,8 @@ function App() {
                       {
                         menuSubcategory === "character_list" &&
                         <>
-                          <button disabled={lockedLists.has("character_list")} className="button-red" data-tooltip="Clear" onClick={() => listClear("character_list")}>
-                            {SVGS.X}
-                          </button>
-                          <button disabled={lockedLists.has("character_list")} className="button-green" data-tooltip="Add" onClick={() => listAdd("character_list")}>
-                            {SVGS.PLUS}
-                          </button>
+                          <ListControlButton.Clear list="character_list" lockedLists={lockedLists} clearingList={clearingList} clickHandler={listClear} />
+                          <ListControlButton.Add list="character_list" lockedLists={lockedLists} clickHandler={listAdd} />
                         </>
                       }
                       <button {...(menuSubcategory === "character_list" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("character_list")}>
@@ -845,12 +846,8 @@ function App() {
                       {
                         menuSubcategory === "series_list" &&
                         <>
-                          <button disabled={lockedLists.has("series_list")} className="button-red" data-tooltip="Clear" onClick={() => listClear("series_list")}>
-                            {SVGS.X}
-                          </button>
-                          <button disabled={lockedLists.has("series_list")} className="button-green" data-tooltip="Add" onClick={() => listAdd("series_list")}>
-                            {SVGS.PLUS}
-                          </button>
+                          <ListControlButton.Clear list="series_list" lockedLists={lockedLists} clearingList={clearingList} clickHandler={listClear} />
+                          <ListControlButton.Add list="series_list" lockedLists={lockedLists} clickHandler={listAdd} />
                         </>
                       }
                       <button {...(menuSubcategory === "series_list" && { className: "toggle" })} onClick={() => toggleMenuSubcategory("series_list")}>

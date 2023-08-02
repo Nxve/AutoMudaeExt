@@ -1,0 +1,16 @@
+.list-button-green:hover {
+    color: var(--green-300) !important;
+}
+
+.list-button-red1:hover {
+    color: var(--red-400) !important;
+}
+
+.list-button-red2 {
+    background-color: #491111;
+}
+
+.list-button-red2:hover {
+    background-color: #640c0c !important;
+    color: white !important;
+}
