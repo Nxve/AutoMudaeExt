@@ -624,7 +624,7 @@ const bot: BotManager = {
             return tags;
         }
 
-        /// Handle character messages
+        /// Handle rolls
         const $imageWrapper = $msg.querySelector("div[class^='embedDescription'] + div[class^='imageContent'] div[class^='imageWrapper']") as HTMLDivElement | null;
         const isSlashRolled = interactionInfo ? ROLL_TYPES.includes(interactionInfo.command as any) : false;
 
@@ -953,7 +953,7 @@ const bot: BotManager = {
             }
 
             /// Handle kakera claiming
-            const $kakeraClaimStrong = $msg.querySelector("div[id^='message-content'] span[class^='emojiContainer'] + strong") as HTMLElement | null;
+            const $kakeraClaimStrong = $msg.querySelector("div[id^='message-content'] span[class^='emojiContainer'] ~ strong") as HTMLElement | null;
 
             if ($kakeraClaimStrong) {
                 const kakeraClaimMatch = /^(.+)\s\+(\d+)$/.exec($kakeraClaimStrong.innerText);
@@ -972,7 +972,7 @@ const bot: BotManager = {
                         if (!kakeraType) {
                             tags.push(["aborted", "no kakera type found"]);
 
-                            bot.log.error("Couldn't get kakera type from message [?]", false); //# Add reference to message
+                            bot.log.error("Couldn't get kakera type from message <NotImplementedReference>", false); //# Add reference to message
                             return tags;
                         }
 
@@ -1044,8 +1044,8 @@ const syncPreferences = (newPreferences: Preferences) => {
             //# Notify about it
             window.location.reload();
             //# Resetup instead
-            //# Then there will be a loop of resync while setting up, hanging preferences again & again
-            //# Should wait for the use to stop altering tokenlist, otherwise it will keep setting up for each altered token
+            // Then there will be a loop of resync while setting up, hanging preferences again & again
+            // Should wait for the use to stop altering tokenlist, otherwise it will keep setting up for each altered token
             return;
         }
 
