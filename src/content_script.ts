@@ -624,17 +624,16 @@ const bot: BotManager = {
             return tags;
         }
 
-        /// Handle rolls
+        /// Handle character rolls or lookups ($im)
         const $imageWrapper = $msg.querySelector("div[class^='embedDescription'] + div[class^='imageContent'] div[class^='imageWrapper']") as HTMLDivElement | null;
         const isSlashRolled = interactionInfo ? ROLL_TYPES.includes(interactionInfo.command as any) : false;
 
         if (isSlashRolled || $imageWrapper) {
-            tags.push(["character-roll-im", isSlashRolled ? "slash" : "typed"]);
+            tags.push("lookup-or-roll");
 
             const characterName = ($msg.querySelector("span[class^='embedAuthorName']") as HTMLElement | null)?.innerText;
 
             if (!characterName) {
-                /// Handle "no more rolls" messages
                 if (messageContent) {
                     const noMoreRollsMatch = LANG[bot.preferences.guild.language].regex.noMoreRolls.exec(messageContent);
 
@@ -660,13 +659,33 @@ const bot: BotManager = {
                 return tags;
             }
 
+            let isLookup = false, isOwned = false;
+
             const $footer = $msg.querySelector("span[class^='embedFooterText']") as HTMLSpanElement | null;
-            const isOwned = !!($footer && $footer.innerText.includes(LANG[bot.preferences.guild.language].string.ownedCharacter));
+
+            if ($footer) {
+                isLookup = /\d+\s\/\s\d+$/.test($footer.innerText);
+                isOwned = $footer.innerText.includes(LANG[bot.preferences.guild.language].string.ownedCharacter);
+            }
 
             tags.push(["character-owned", isOwned ? "yes" : "no"]);
 
+            if (isLookup) {
+                tags.push("character-lookup");
+                return tags;
+            }
+
             /// Decreases rolls count && handle new soulmates
-            if (botUser) {
+            if (botUser && isSlashRolled) {
+                if (isOwned) {
+                    const $embedDescription = $msg.querySelector("div[class^='embedDescription']") as HTMLElement | null;
+
+                    if ($embedDescription?.innerText.includes(LANG[bot.preferences.guild.language].string.newSoulmate)) {
+                        tags.push("new-soulmate");
+                        bot.log.event(EVENTS.SOULMATE, { character: characterName, user: botUser.username });
+                    }
+                }
+
                 const rollsUs = botUser.info.get(USER_INFO.ROLLS_LEFT_US) as number | undefined;
 
                 if (rollsUs != null && rollsUs > 0) {
@@ -680,13 +699,6 @@ const bot: BotManager = {
                 }
 
                 syncUserInfo(botUser);
-
-                const $embedDescription = $msg.querySelector("div[class^='embedDescription']") as HTMLElement | null;
-
-                if ($embedDescription && $embedDescription.innerText.includes(LANG[bot.preferences.guild.language].string.newSoulmate)) {
-                    tags.push("new-soulmate");
-                    bot.log.event(EVENTS.SOULMATE, { character: characterName, user: botUser.username });
-                }
             }
 
             /// Check if should try to claim
@@ -759,7 +771,7 @@ const bot: BotManager = {
 
                         let claimDelay = bot.preferences.claim.delay;
 
-                        if (claimDelay > 0) {
+                        if (claimDelay) {
                             if (bot.preferences.claim.delayRandom && claimDelay > .1) claimDelay = randomFloat(.1, claimDelay, 2);
 
                             claimDelay *= 1000;
@@ -767,8 +779,7 @@ const bot: BotManager = {
 
                         const canClaimImmediately = !isProtected || (interactionInfo && marriageableUser.id === interactionInfo.userId);
 
-                        // if (!canClaimImmediately) claimDelay = 2905 + Math.max(claimDelay - 2905, 0);
-                        if (!canClaimImmediately) claimDelay = _.clamp(2905, claimDelay, MAX_CLAIM_DELAY_IN_SECONDS) * 1000;
+                        if (!canClaimImmediately) claimDelay = _.clamp(claimDelay, 2905, MAX_CLAIM_DELAY_IN_SECONDS * 1000);
 
                         const thisClaim = () => {
                             marriageableUser.pressMessageButton($msg)
@@ -783,8 +794,6 @@ const bot: BotManager = {
                             tags.push(["will-try-marry", "no-delay"]);
                             return tags;
                         }
-
-                        claimDelay = 2905 + Math.max(claimDelay - 2905, 0);
 
                         setTimeout(() => thisClaim(), claimDelay);
                         tags.push(["will-try-marry", claimDelay + "ms"]);
@@ -967,7 +976,9 @@ const bot: BotManager = {
                     tags.push(["kakera-notification", user ? (user.username || "me") : "other"]);
 
                     if (user) {
-                        const kakeraType = ($kakeraClaimStrong.previousElementSibling?.firstElementChild as HTMLImageElement | null)?.alt.replace(/:/g, '');
+                        const $kakeraClaimImage = $msg.querySelector("div[id^='message-content'] span[class^='emojiContainer'] > img") as HTMLImageElement | null;
+
+                        const kakeraType = $kakeraClaimImage?.alt.replace(/:/g, '');
 
                         if (!kakeraType) {
                             tags.push(["aborted", "no kakera type found"]);
