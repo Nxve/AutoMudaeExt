@@ -1,19 +1,14 @@
 # AutoMudae Extension 👾
 Automates the use of Mudae bot in Discord. This is the Chrome Extension version of the discontinued [AutoMudae userscript](https://github.com/Nxve/AutoMudae).
 
-## ⚠ Disclaimer
-It is still in early development, thus unavailable in webstore.
-You can expect it to be available for use after the completion of the below roadmap, _not including secondary plans_:
-
-#### Roadmap to get it working:
+#### Roadmap:
 - Auto focus added list entry
 - Import/Export config
-    - Maybe only lists
 - Import/Export lists from pastebin or file
 - Notifications
     - Some of the events should trigger sound notifications
 - Advise about it's requirements:
-    - Maybe after installation, in a "guide" page
+    - Maybe after installation, in a guide page
     - Requirements:
         - Custom avatar for each user
         - Slash commands only
